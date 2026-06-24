@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>うさうさ プロンプトスタジオ｜台本・画像・動画ジェネレーター</title>
+<style>
+  /* ============================================================
+     うさうさ研修工房 — プロンプトスタジオ
+     ① 台本ジェネレーター
+     ② しろうさぎアナウンサー 画像プロンプト
+     ③ うさうさ 動画・アニメプロンプト
+     単一HTML / 完全オフライン / CDN非依存 / 外部送信なし
+     ============================================================ */
+  :root{
+    --ink:#3D1228; --rose:#8B2D4F; --rose-soft:#B85877; --gold:#C9A227;
+    --blush:#D98FA3; --paper:#FBF6F0; --paper-2:#F4EBE2; --fur:#FFF7EC;
+    --line:#E4D3C8; --text:#43323a; --muted:#8a7782;
+    --studio-blue:#657DAC; --studio-red:#D54E4B;
+    --font-serif:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","MS PMincho",serif;
+    --font-sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","YuGothic","Meiryo",system-ui,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --radius:14px; --shadow:0 10px 30px -12px rgba(61,18,40,.28);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;font-family:var(--font-sans);color:var(--text);
+    background:
+      radial-gradient(1200px 500px at 80% -10%, #fde9ee 0%, transparent 60%),
+      radial-gradient(900px 400px at -10% 10%, #fbf0d8 0%, transparent 55%),
+      var(--paper);
+    line-height:1.7;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--rose)}
+
+  header.masthead{border-bottom:3px double var(--rose);background:linear-gradient(180deg,#fff 0%,var(--fur) 100%)}
+  .masthead-inner{max-width:1180px;margin:0 auto;padding:18px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .logo{width:54px;height:54px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 50% 38%, #fff 0%, var(--fur) 70%);
+    border:2px solid var(--rose);display:grid;place-items:center;font-size:30px;box-shadow:var(--shadow)}
+  .brand h1{font-family:var(--font-serif);font-weight:700;color:var(--ink);margin:0;font-size:clamp(19px,3.2vw,27px);letter-spacing:.03em}
+  .brand .sub{margin:2px 0 0;color:var(--rose);font-size:13px;letter-spacing:.18em}
+  .onair{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--font-serif);
+    color:var(--studio-red);font-weight:700;border:1.5px solid var(--studio-red);border-radius:999px;
+    padding:5px 14px;font-size:13px;background:#fff}
+  .onair .dot{width:9px;height:9px;border-radius:50%;background:var(--studio-red);animation:blink 1.4s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .util{display:flex;gap:7px;flex-wrap:wrap;margin-left:10px}
+
+  /* テントウムシ（バグ・気づきメモ） */
+  .ladybug{position:fixed;left:20px;bottom:22px;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+    background:radial-gradient(circle at 50% 30%, #e85b5b 0%, #c0322f 70%);box-shadow:var(--shadow);font-size:26px;z-index:45;
+    display:grid;place-items:center;transition:transform .15s}
+  .ladybug:hover{transform:scale(1.08) rotate(-6deg)}
+  .ladybug .count{position:absolute;top:-4px;right:-4px;background:var(--ink);color:#fff;font-size:11px;font-weight:700;
+    min-width:19px;height:19px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
+  .bugpanel{position:fixed;left:20px;bottom:84px;width:min(340px,calc(100vw - 40px));background:#fff;border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow);z-index:46;overflow:hidden;display:none}
+  .bugpanel.open{display:block;animation:fade .2s ease}
+  .bugpanel h3{margin:0;font-family:var(--font-serif);font-size:15px;color:var(--ink);padding:12px 14px;
+    border-bottom:1px solid var(--line);background:var(--paper);display:flex;align-items:center;gap:8px}
+  .bugpanel .bp-body{padding:12px 14px;max-height:46vh;overflow:auto}
+  .bug-item{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+  .bug-item .bm{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+  .bug-item .sev{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px}
+  .bug-item .sev.バグ{background:#fbe3e3;color:#a3322f}.bug-item .sev.要改善{background:#fdf0d8;color:#9a7a1e}.bug-item .sev.気づき{background:#e4ecf6;color:#3d5b86}
+  .bug-item .when{color:var(--muted);font-size:11px;margin-left:auto}
+  .bug-item .bx{border:none;background:transparent;cursor:pointer;color:var(--muted);font-size:15px}
+
+  /* タブバー */
+  .tabs{max-width:1180px;margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;flex-wrap:wrap}
+  .tab-btn{
+    font:inherit;font-family:var(--font-serif);font-weight:700;font-size:15px;cursor:pointer;
+    border:1.5px solid var(--line);border-bottom:none;background:#fff;color:var(--muted);
+    padding:11px 18px;border-radius:12px 12px 0 0;transition:all .15s;display:flex;align-items:center;gap:8px;
+  }
+  .tab-btn .n{font-size:12px;color:var(--gold)}
+  .tab-btn:hover{color:var(--ink);background:var(--fur)}
+  .tab-btn.active{color:var(--ink);background:var(--paper);border-color:var(--rose);box-shadow:0 -3px 0 var(--rose) inset}
+  .tabs-rule{max-width:1180px;margin:0 auto;border-top:2px solid var(--rose);opacity:.35}
+
+  .tabpanel{display:none}
+  .tabpanel.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 22px 40px;
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:26px;align-items:start}
+  @media (max-width:920px){.wrap{grid-template-columns:1fr;gap:20px}}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .panel > .panel-head{padding:13px 18px;background:linear-gradient(180deg,#fff,var(--paper));
+    border-bottom:1px solid var(--line)}
+  .panel-head .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--gold);font-weight:700}
+  .panel-head h2{margin:2px 0 0;font-family:var(--font-serif);font-size:18px;color:var(--ink)}
+  .panel-body{padding:18px}
+
+  details.group{border:1px solid var(--line);border-radius:10px;margin-bottom:16px;background:var(--paper)}
+  details.group > summary{cursor:pointer;list-style:none;padding:12px 14px;font-family:var(--font-serif);
+    color:var(--ink);font-weight:700;display:flex;align-items:center;gap:8px;border-radius:10px}
+  details.group > summary::-webkit-details-marker{display:none}
+  details.group > summary .chev{margin-left:auto;transition:transform .2s ease;color:var(--rose)}
+  details.group[open] > summary .chev{transform:rotate(90deg)}
+  details.group .group-inner{padding:4px 14px 16px}
+
+  .field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+  label.lbl{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  label.lbl .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+  input[type=text],textarea,select{width:100%;font:inherit;font-size:14px;color:var(--text);
+    background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;transition:border-color .15s, box-shadow .15s}
+  textarea{resize:vertical;min-height:62px;line-height:1.6}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 3px rgba(139,45,79,.14)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.two{grid-template-columns:1fr}}
+
+  /* セグメント選択 */
+  .seg-group{display:flex;flex-wrap:wrap;gap:7px}
+  .seg-group .opt{font:inherit;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);
+    background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:8px 13px;transition:all .12s}
+  .seg-group .opt:hover{border-color:var(--rose-soft);color:var(--ink)}
+  .seg-group .opt.on{background:var(--rose);border-color:var(--rose);color:#fff}
+  .seg-group .opt.on[data-val=red]{background:var(--studio-red);border-color:var(--studio-red)}
+  .seg-group .opt.on[data-val=blue]{background:var(--studio-blue);border-color:var(--studio-blue)}
+
+  /* 比喩対応表 */
+  .metaphor-row{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
+  .metaphor-row .row-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.05em}
+  .tag.why{background:#fbe3e3;color:#a3322f;border:1px solid #efbcbb}
+  .tag.how{background:#e4ecf6;color:#3d5b86;border:1px solid #bcd0e8}
+  .seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:none;background:#fff;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;color:var(--muted)}
+  .seg button.on[data-v=why]{background:var(--studio-red);color:#fff}
+  .seg button.on[data-v=how]{background:var(--studio-blue);color:#fff}
+  .del-row{margin-left:auto;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:4px;border-radius:6px}
+  .del-row:hover{background:#fbe3e3;color:#a3322f}
+  .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  @media (max-width:520px){.mini-grid{grid-template-columns:1fr}}
+
+  .btn{font:inherit;font-weight:700;cursor:pointer;border-radius:10px;padding:10px 16px;
+    border:1.5px solid var(--rose);background:#fff;color:var(--rose);transition:all .15s}
+  .btn:hover{background:var(--rose);color:#fff}
+  .btn.solid{background:var(--rose);color:#fff}
+  .btn.solid:hover{background:var(--ink);border-color:var(--ink)}
+  .btn.ghost{border-color:var(--line);color:var(--ink)}
+  .btn.ghost:hover{background:var(--paper-2);color:var(--ink)}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:8px}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px}
+
+  .preview-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--paper)}
+
+  /* 台本プレビュー */
+  .script{padding:20px 22px}
+  .script .title-card{border:1px solid var(--line);border-left:5px solid var(--gold);border-radius:10px;
+    padding:14px 16px;margin-bottom:18px;background:linear-gradient(180deg,#fff,var(--fur))}
+  .script .title-card .kicker{font-size:11px;letter-spacing:.2em;color:var(--gold);font-weight:700}
+  .script .title-card h3{font-family:var(--font-serif);color:var(--ink);margin:4px 0 0;font-size:clamp(18px,2.6vw,22px);line-height:1.4}
+  .script .title-card .meta{margin-top:6px;font-size:12px;color:var(--muted)}
+  .scene{border:1px solid var(--line);border-radius:10px;margin-bottom:14px;overflow:hidden;background:#fff}
+  .scene .sc-head{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--line);background:var(--paper)}
+  .sc-num{font-family:var(--font-serif);font-weight:700;color:#fff;background:var(--ink);width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:13px;flex:0 0 auto}
+  .sc-name{font-family:var(--font-serif);font-weight:700;color:var(--ink);font-size:15px}
+  .sc-chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:#fff}
+  .chip.blue{color:#3d5b86;border-color:#bcd0e8;background:#eef3fa}
+  .chip.red{color:#a3322f;border-color:#efbcbb;background:#fbe3e3}
+  .chip.img{color:var(--rose);border-color:#e7c3cf;background:#fbeef2}
+  .sc-body{padding:12px 14px}
+  .narration{font-size:14.5px;line-height:1.85;color:#352028;white-space:pre-wrap;border-left:3px solid var(--blush);padding-left:12px;margin:0}
+  .narration .ph{color:var(--rose);background:#fbeef2;border-radius:4px;padding:0 3px;font-weight:700}
+  .stage{font-size:12.5px;color:var(--muted);margin-top:9px;font-style:italic}
+
+  .checklist{margin-top:4px}
+  .checklist label{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;padding:6px 0;color:var(--text);cursor:pointer}
+  .checklist input{margin-top:3px;accent-color:var(--rose);width:16px;height:16px}
+
+  /* プロンプト出力 */
+  .prompt-pre{margin:0;padding:16px 18px;font-family:var(--mono);font-size:12.7px;line-height:1.65;
+    color:#2f2430;white-space:pre-wrap;word-break:break-word;background:#fffdfb}
+  .swatches{display:flex;flex-wrap:wrap;gap:6px;padding:12px 18px;border-bottom:1px solid var(--line);background:#fff}
+  .sw{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 8px 3px 4px}
+  .sw i{width:15px;height:15px;border-radius:50%;border:1px solid rgba(0,0,0,.12);display:inline-block}
+
+  .note{margin:16px 0 0;border:1px dashed var(--blush);border-radius:10px;padding:12px 14px;background:#fdf3f6;font-size:12.5px;color:#6e4a58}
+  .note b{color:var(--rose)}
+
+  footer.foot{max-width:1180px;margin:0 auto;padding:10px 22px 50px;color:var(--muted);font-size:12px;text-align:center}
+  footer.foot .stamp{font-family:var(--font-serif);color:var(--rose)}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;
+    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .25s ease;z-index:50}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+  /* 和紙風の記載欄 */
+  input[type=text],input[type=password],textarea,select{
+    background-color:#FDF9F1;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(150,120,90,.05) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(90deg, rgba(150,120,90,.035) 0 1px, transparent 1px 5px),
+      radial-gradient(rgba(150,120,90,.05) .5px, transparent .6px);
+    background-size:auto,auto,8px 8px;
+  }
+  input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{background-color:#fffdf8}
+
+  /* ボタン：影・輪郭、押すとへこむ */
+  .btn,.opt,.tab-btn,.ladybug,.iconbtn{
+    box-shadow:0 2px 0 rgba(61,18,40,.13), 0 4px 9px -5px rgba(61,18,40,.3);
+  }
+  .btn:active,.opt:active{transform:translateY(2px);box-shadow:inset 0 2px 6px rgba(61,18,40,.28)}
+  .tab-btn:active{transform:translateY(1px)}
+  .ladybug:active{transform:translateY(2px) scale(1.02);box-shadow:inset 0 2px 7px rgba(0,0,0,.35)}
+  .iconbtn:active{transform:translateY(2px);box-shadow:inset 0 2px 6px rgba(61,18,40,.28)}
+
+  /* アイコンボタン（鈴・使い方） */
+  .iconbtn{font:inherit;font-size:16px;cursor:pointer;border:1.5px solid var(--line);background:#fff;
+    border-radius:10px;width:40px;height:38px;display:grid;place-items:center;transition:all .12s}
+  .iconbtn:hover{border-color:var(--rose-soft)}
+  .iconbtn.on{background:var(--gold);border-color:var(--gold)}
+
+  /* キャラプリセット */
+  .preset-chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;
+    padding:6px 12px;margin:0 6px 6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);background:#fff;transition:all .12s}
+  .preset-chip:hover{border-color:var(--rose-soft);color:var(--ink)}
+  .preset-chip.active{background:var(--rose);border-color:var(--rose);color:#fff}
+  .preset-chip .dotc{width:12px;height:12px;border-radius:50%;border:1px solid #0002}
+  .pal-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .pal-row input[type=color]{width:38px;height:34px;padding:2px;border:1.5px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+  .pal-row .pal-role{flex:1}
+  .pal-row .pal-hex{width:104px;font-family:var(--mono);font-size:12.5px}
+  .pal-row .pal-del{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:16px}
+
+  /* 使い方オーバーレイ */
+  .overlay{position:fixed;inset:0;background:rgba(61,18,40,.42);z-index:60;display:none;
+    align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
+  .overlay.open{display:flex;animation:fade .2s ease}
+  .help-card{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    max-width:680px;width:100%;overflow:hidden}
+  .help-card h3{margin:0;font-family:var(--font-serif);font-size:19px;color:var(--ink);padding:16px 20px;
+    border-bottom:3px double var(--rose);display:flex;align-items:center;gap:10px}
+  .help-card .hc-body{padding:18px 20px;max-height:64vh;overflow:auto;font-size:14px;line-height:1.8}
+  .help-card .hc-body h4{font-family:var(--font-serif);color:var(--rose);margin:16px 0 4px;font-size:15px}
+  .help-card .hc-body p{margin:.2em 0;color:var(--text)}
+  .help-card .hc-close{margin-left:auto}
+
+  @media print{
+    header.masthead,.tabs,.tabs-rule,.preview-actions,.no-print,.note,.overlay,.bugpanel,.ladybug{display:none!important}
+    .tabpanel{display:none!important}.tabpanel.active{display:block!important}
+    .wrap{grid-template-columns:1fr;padding:0}.panel{box-shadow:none;border:none}body{background:#fff}
+  }
+</style>
+<style id="theme-antique">
+  /* ============================================================
+     うさうさ撮影所 — アンティーク・シネマ・テーマ（上書きレイヤー）
+     構造・ID・JSは変更せず、色トークンと装飾のみを上書き
+     ============================================================ */
+  :root{
+    --ink:#241a14; --rose:#7E2B43; --rose-soft:#9d4a60; --gold:#B68A3E;
+    --blush:#bb8a86; --paper:#ece0c8; --paper-2:#e0d0b3; --fur:#f3ead6;
+    --line:#c9b48f; --text:#3a2c22; --muted:#8a7560; --radius:8px;
+    --shadow:0 16px 38px -16px rgba(22,13,8,.6);
+  }
+  body{
+    color:var(--text);
+    background:
+      radial-gradient(1100px 640px at 50% -12%, rgba(214,178,120,.18), transparent 60%),
+      radial-gradient(900px 520px at 82% 14%, rgba(126,43,67,.12), transparent 55%),
+      linear-gradient(180deg,#2a1d16,#201610);
+    background-attachment:fixed;
+  }
+
+  /* マストヘッド＝カチンコ */
+  header.masthead{position:relative;border-bottom:none;
+    background:linear-gradient(180deg,#f6eede,#ece0c8);
+    box-shadow:0 6px 0 #1d150f, 0 12px 26px -10px rgba(0,0,0,.5)}
+  header.masthead::before{content:"";position:absolute;top:0;left:0;right:0;height:11px;
+    background:repeating-linear-gradient(118deg,#241a14 0 20px,#f3ead6 20px 40px)}
+  .masthead-inner{padding-top:24px}
+  .logo{width:60px;height:60px}
+  .logo img{width:86%;height:86%;object-fit:contain;display:block;filter:drop-shadow(0 1px 1px rgba(80,50,20,.18))}
+  .logo{background:radial-gradient(circle at 50% 35%,#fbf3df,#e7d3a8);
+    border:2px solid var(--gold);box-shadow:0 0 0 3px rgba(255,255,255,.45), inset 0 0 10px rgba(120,80,30,.25), var(--shadow)}
+  .brand h1{color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.5);letter-spacing:.05em}
+  .brand .sub{color:var(--rose);letter-spacing:.3em}
+  .onair{background:linear-gradient(180deg,#2a1d16,#1c130d);color:#ffd9d0;border:1.5px solid var(--gold);
+    box-shadow:inset 0 0 8px rgba(0,0,0,.5), 0 0 14px rgba(213,78,75,.35)}
+
+  /* フィルム・パーフォレーション */
+  .tabs-rule{height:15px;opacity:1;border:none;margin-top:2px;border-radius:3px;
+    background-color:#1b130f;background-image:radial-gradient(circle,#efe3cf 2.1px,transparent 2.5px);
+    background-size:15px 15px;background-position:center;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+
+  /* タブ＝撮影スレート */
+  .tabs{padding-top:16px}
+  .tab-btn{background:linear-gradient(180deg,#e9dcc2,#dbc8a4);color:#6e5a44;border:1.5px solid var(--line);
+    border-bottom:none;box-shadow:var(--shadow)}
+  .tab-btn .n{color:var(--rose)}
+  .tab-btn:hover{background:linear-gradient(180deg,#f1e6cf,#e6d6b4);color:var(--ink)}
+  .tab-btn.active{background:linear-gradient(180deg,#fbf4e2,#f0e5cd);color:var(--ink);
+    border-color:var(--gold);box-shadow:0 -3px 0 var(--rose) inset}
+
+  /* パネル＝台本ページ＋テープ */
+  .panel{position:relative;background:var(--paper);border:1px solid var(--line);
+    box-shadow:0 0 0 1px rgba(255,255,255,.4) inset, var(--shadow);
+    background-image:radial-gradient(rgba(150,120,80,.05) .6px,transparent .7px);background-size:9px 9px}
+  .panel::after{content:"";position:absolute;top:-7px;left:20px;width:58px;height:17px;border-radius:1px;
+    background:rgba(182,138,62,.30);border:1px solid rgba(120,80,30,.18);transform:rotate(-2.5deg);
+    box-shadow:0 2px 4px rgba(0,0,0,.12)}
+  .panel>.panel-head{background:linear-gradient(180deg,#f6eede,var(--paper));border-bottom:1px solid var(--line)}
+  .panel-head .eyebrow{color:var(--gold);letter-spacing:.28em}
+  .panel-head h2{color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.5)}
+
+  /* 記載欄＝古紙 */
+  input[type=text],input[type=password],textarea,select{background-color:#f1e7d0;border-color:var(--line)}
+  input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{background-color:#f8f0db;border-color:var(--rose);box-shadow:0 0 0 3px rgba(126,43,67,.16)}
+  details.group{background:var(--paper-2);border-color:var(--line)}
+
+  /* ボタン＝真鍮レタープレス（押すとへこむ効果は既存を継承） */
+  .btn{background:linear-gradient(180deg,#f4ecda,#e7d9be);color:var(--rose);border:1.5px solid var(--line)}
+  .btn:hover{background:linear-gradient(180deg,var(--rose),#6a2238);color:#fff;border-color:#5e1e30}
+  .btn.ghost{color:var(--ink)}
+  .btn.solid{background:linear-gradient(180deg,#8c3350,var(--rose));color:#fff;border-color:#5e1e30;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .btn.solid:hover{background:linear-gradient(180deg,#7a2840,#5e1e30);color:#fff}
+  .opt{background:linear-gradient(180deg,#f3ead6,#e6d6b4);border-color:var(--line);color:#6e5a44}
+  .opt:hover{color:var(--ink)}
+  .opt.on{background:linear-gradient(180deg,#8c3350,var(--rose));border-color:#5e1e30;color:#fff}
+  .iconbtn{background:linear-gradient(180deg,#f4ecda,#e6d8bd);border-color:var(--line)}
+  .iconbtn.on{background:var(--gold);border-color:#8c6a2c;color:#241a14}
+
+  /* シーンカード・チップ・プレビュー */
+  .preview-actions{background:linear-gradient(180deg,#efe2c9,#e7d9be);border-bottom:1px solid var(--line)}
+  .scene{background:#f6eede;border-color:var(--line)}
+  .sc-head{background:linear-gradient(180deg,#efe2c9,#e6d8bd);border-bottom:1px solid var(--line)}
+  .title-card{background:linear-gradient(180deg,#f8f1e0,var(--fur));border-color:var(--line);border-left-color:var(--gold)}
+  .metaphor-row,.bug-item,.pal-row{background:#f6eede}
+  .prompt-pre{background:#f5ecd6 !important}
+  .swatches{background:#f3ead6;border-bottom:1px solid var(--line)}
+  .preset-chip{background:linear-gradient(180deg,#f3ead6,#e6d6b4);border-color:var(--line)}
+  .preset-chip.active{background:linear-gradient(180deg,#8c3350,var(--rose));border-color:#5e1e30;color:#fff}
+  .note{background:#f3ead6;border-color:var(--blush);color:#6e5240}
+
+  /* オーバーレイ・ヘルプ・バグ */
+  .help-card,.bugpanel{background:var(--paper);border-color:var(--line)}
+  .help-card h3,.bugpanel h3{background:linear-gradient(180deg,#f6eede,var(--paper));border-color:var(--rose)}
+  .overlay{background:rgba(28,17,10,.55)}
+
+  /* フッター（暗い舞台上なので明色に） */
+  footer.foot{color:#cdb79a}
+  footer.foot .stamp{color:#e7c6a0}
+
+  /* スタッキング安定化 */
+  header.masthead,.tabs,.tabs-rule,.wrap,footer.foot{position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo" aria-hidden="true"><img src="data:image/png;base64,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" alt="うさうさ"></div>
+    <div class="brand">
+      <h1>うさうさ プロンプトスタジオ</h1>
+      <p class="sub">U S A U S A &nbsp;研修工房</p>
+    </div>
+    <div class="onair"><span class="dot"></span>ON AIR</div>
+    <div class="util no-print">
+      <button class="iconbtn" id="bell" type="button" title="クリック音 ON/OFF" aria-label="クリック音の切替">🔕</button>
+      <button class="iconbtn" id="help-btn" type="button" title="使い方" aria-label="使い方">❓</button>
+      <button class="btn ghost sm" id="sample-btn" type="button" title="白兎アナのサンプルを読み込む">🎬 サンプル</button>
+      <button class="btn ghost sm" id="clear-btn" type="button" title="入力をクリア">🧹 クリア</button>
+      <button class="btn ghost sm" id="proj-save" type="button" title="全タブの入力をJSONで保存">💾 保存</button>
+      <button class="btn ghost sm" id="proj-load" type="button" title="JSONから復元">📂 復元</button>
+      <input type="file" id="proj-file" accept="application/json,.json" style="display:none">
+    </div>
+  </div>
+</header>
+
+<!-- タブバー -->
+<nav class="tabs" role="tablist" aria-label="生成ツール">
+  <button class="tab-btn active" role="tab" data-tab="script"><span class="n">01</span>台本</button>
+  <button class="tab-btn" role="tab" data-tab="image"><span class="n">02</span>画像プロンプト</button>
+  <button class="tab-btn" role="tab" data-tab="video"><span class="n">03</span>動画・アニメ</button>
+  <button class="tab-btn" role="tab" data-tab="board"><span class="n">04</span>カット割り</button>
+  <button class="tab-btn" role="tab" data-tab="article"><span class="n">05</span>社内記事</button>
+  <button class="tab-btn" role="tab" data-tab="analyze"><span class="n">06</span>画像解析</button>
+  <button class="tab-btn" role="tab" data-tab="chat"><span class="n">07</span>AI壁打ち</button>
+  <button class="tab-btn" role="tab" data-tab="doc"><span class="n">08</span>設計書一式</button>
+  <button class="tab-btn" role="tab" data-tab="preset"><span class="n">09</span>キャラ登録</button>
+  <button class="tab-btn" role="tab" data-tab="request"><span class="n">10</span>制作依頼</button>
+</nav>
+<div class="tabs-rule"></div>
+
+<!-- ============================================================
+     TAB 01 — 台本ジェネレーター
+     ============================================================ -->
+<section class="tabpanel active" id="tab-script" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">EPISODE INPUT</div><h2>今回の回を入力する</h2></div>
+        <div class="panel-body">
+
+          <details class="group">
+            <summary>🔒 グローバル設定（基本は固定・必要時のみ編集）<span class="chev">▸</span></summary>
+            <div class="group-inner">
+              <div class="field"><label class="lbl">番組タイトル</label><input type="text" id="g_program" value="しろうさぎニュース"></div>
+              <div class="field"><label class="lbl">アナウンサー名乗り</label><input type="text" id="g_anchor" value="うさうさアナウンサー"></div>
+              <div class="two">
+                <div class="field"><label class="lbl">核心メッセージ <span class="hint">毎回再強調</span></label><input type="text" id="g_core" value="人間承認（Human-in-the-Loop）の重要性"></div>
+                <div class="field"><label class="lbl">音声トーン</label><input type="text" id="g_voice" value="落ち着いた女性の声・です/ます調"></div>
+              </div>
+              <div class="field"><label class="lbl">決めゼリフ <span class="hint">一言一句固定推奨</span></label><input type="text" id="g_closing" value="面白きこともなき世を面白く。またお会いしましょう。"></div>
+              <div class="field"><label class="lbl">発音指定 <span class="hint">用語→読み（読点区切りで複数可）</span></label><input type="text" id="g_pron" value="PoC→ピーオーシー"></div>
+            </div>
+          </details>
+
+          <div class="field"><label class="lbl">① 今回のスキル名 <span class="hint">SKILL_NAME</span></label><input type="text" id="e_skill" placeholder="例：プロンプトエンジニアリング"></div>
+          <div class="field"><label class="lbl">② サブキャッチ <span class="hint">SUBTITLE</span></label><input type="text" id="e_sub" placeholder="例：商用品質を叩き出す3つの鉄則"></div>
+          <div class="field"><label class="lbl">③ フックのお悩み <span class="hint">問題提起の一言</span></label><input type="text" id="e_problem" placeholder="例：受講生の反応が薄い／AIの出力が毎回ブレる"></div>
+          <div class="field"><label class="lbl">④ 結論の先出し <span class="hint">テーマ提示で最初に言い切る</span></label><input type="text" id="e_conclusion" placeholder="例：品質は才能ではなく『仕組み』で上げられます"></div>
+          <div class="field"><label class="lbl">⑤ 行動喚起 <span class="hint">ACTION_PROMPT</span></label><textarea id="e_action" placeholder="例：明日の業務で、まず1つだけ『証拠（テスト）』を添えてみてください。"></textarea></div>
+
+          <details class="group" open>
+            <summary>🪄 比喩対応表 ＝ 解説シーン（Why→How）<span class="chev">▸</span></summary>
+            <div class="group-inner">
+              <p style="font-size:12.5px;color:var(--muted);margin:2px 0 12px">1行＝1解説シーン（1シーン1概念）。<b>赤＝Why</b>（核心）／<b>青＝How</b>（カイゼン）。3行までが目安です。</p>
+              <div id="metaphor-list"></div>
+              <button class="btn ghost sm" id="add-metaphor" type="button">＋ 解説シーンを追加</button>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="copy-script" type="button">📋 完成台本をコピー</button>
+          <button class="btn sm" id="copy-template" type="button">🧩 テンプレ形式をコピー</button>
+          <button class="btn ghost sm" id="dl-md" type="button">⬇ Markdown保存</button>
+          <button class="btn ghost sm" id="print" type="button">🖨 印刷／PDF</button>
+        </div>
+        <div class="script" id="script-output"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 02 — しろうさぎアナウンサー 画像プロンプト
+     ============================================================ -->
+<section class="tabpanel" id="tab-image" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">CHARACTER IMAGE</div><h2>アナウンサー画像プロンプトを組む</h2></div>
+        <div class="panel-body">
+
+          <div class="field">
+            <label class="lbl">言語</label>
+            <div class="seg-group" data-target="img" data-key="lang">
+              <button class="opt on" data-val="ja" type="button">日本語</button>
+              <button class="opt" data-val="en" type="button">English</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">描画スタイル <span class="hint">アニメ／実写を切替</span></label>
+            <div class="seg-group" data-target="img" data-key="style">
+              <button class="opt on" data-val="anime" type="button">2Dアニメ</button>
+              <button class="opt" data-val="cg" type="button">3D-CG</button>
+              <button class="opt" data-val="real" type="button">実写フォト</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">出力タイプ</label>
+            <div class="seg-group" data-target="img" data-key="kind">
+              <button class="opt on" data-val="single" type="button">単体イラスト</button>
+              <button class="opt" data-val="sheet" type="button">設定シート（4面）</button>
+            </div>
+          </div>
+
+          <div class="field" data-show="img.kind=single">
+            <label class="lbl">ポーズ</label>
+            <div class="seg-group" data-target="img" data-key="pose">
+              <button class="opt on" data-val="front" type="button">正面</button>
+              <button class="opt" data-val="side" type="button">横</button>
+              <button class="opt" data-val="back" type="button">後ろ</button>
+              <button class="opt" data-val="hand" type="button">手を上げる</button>
+            </div>
+          </div>
+
+          <div class="field" data-show="img.kind=single">
+            <label class="lbl">表情</label>
+            <div class="seg-group" data-target="img" data-key="expr">
+              <button class="opt on" data-val="normal" type="button">通常</button>
+              <button class="opt" data-val="smile" type="button">笑顔</button>
+              <button class="opt" data-val="surprise" type="button">驚き</button>
+              <button class="opt" data-val="worried" type="button">困り</button>
+              <button class="opt" data-val="serious" type="button">真剣</button>
+            </div>
+          </div>
+
+          <div class="field" data-show="img.kind=single">
+            <label class="lbl">背景</label>
+            <div class="seg-group" data-target="img" data-key="bg">
+              <button class="opt on" data-val="white" type="button">白背景</button>
+              <button class="opt" data-val="studio" type="button">スタジオ背景</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">添付</label>
+            <div class="seg-group" data-target="img" data-key="checklist">
+              <button class="opt on" data-val="on" type="button">一貫性チェックリストを付ける</button>
+              <button class="opt" data-val="off" type="button">付けない</button>
+            </div>
+          </div>
+
+          <details class="group">
+            <summary>🩹 うまくいかない時の追記（NG修正）<span class="chev">▸</span></summary>
+            <div class="group-inner" style="font-size:12.8px;color:var(--text)">
+              <p style="margin:.2em 0">気になる崩れがあれば、生成プロンプト末尾に1行足してください。</p>
+              <p style="margin:.4em 0"><b>体が白すぎ</b> → <code>warm off-white, not pure white, slight cream tint</code></p>
+              <p style="margin:.4em 0"><b>スーツが黒くなる</b> → <code>navy blue suit, NOT black, color #334469</code></p>
+              <p style="margin:.4em 0"><b>蝶ネクタイが明るすぎ</b> → <code>deep wine red bow tie #AF3533, NOT bright red</code></p>
+              <p style="margin:.4em 0"><b>3D風になる</b> → <code>strictly flat 2D, cel-shaded anime, NO 3D rendering</code></p>
+              <p style="margin:.4em 0"><b>目がリアル化</b> → <code>simple round black dot eyes, kawaii anime, no realistic eyes</code></p>
+              <p style="margin:.4em 0"><b>にんじんが消える</b> → <code>IMPORTANT: always include an orange carrot on the desk</code></p>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="img-copy" type="button">📋 プロンプトをコピー</button>
+          <button class="btn ghost sm" id="img-dl" type="button">⬇ テキスト保存</button>
+        </div>
+        <div class="swatches" id="img-swatches"></div>
+        <pre class="prompt-pre" id="img-output"></pre>
+      </div>
+      <div class="note no-print"><b>固定仕様：</b>体毛#FDF5EE／アウトライン#2D2A24（純黒禁止）／スーツ#334469（黒・灰禁止）／蝶ネクタイ#AF3533／ボタン#E8AD44。フラット2Dアニメ・大頭・NEWSプレート・にんじん・マイクは不変です。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 03 — うさうさ 動画・アニメプロンプト
+     ============================================================ -->
+<section class="tabpanel" id="tab-video" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">VIDEO / ANIME</div><h2>動画・アニメ用プロンプトを組む</h2></div>
+        <div class="panel-body">
+
+          <div class="field">
+            <label class="lbl">モード</label>
+            <div class="seg-group" data-target="vid" data-key="mode" style="flex-direction:column;align-items:stretch">
+              <button class="opt on" data-val="base" type="button">① ベース静止画（動画化の元絵）</button>
+              <button class="opt" data-val="idle" type="button">② アイドルループ（待機モーション）</button>
+              <button class="opt" data-val="gesture" type="button">③ ジェスチャー別モーション</button>
+              <button class="opt" data-val="news" type="button">④ ニュース番組トーキング</button>
+            </div>
+          </div>
+
+          <div class="field" data-show="vid.mode=gesture">
+            <label class="lbl">ジェスチャー</label>
+            <div class="seg-group" data-target="vid" data-key="gesture">
+              <button class="opt on" data-val="greet" type="button">挨拶・オープニング</button>
+              <button class="opt" data-val="explain" type="button">説明・解説</button>
+              <button class="opt" data-val="surprise" type="button">驚き・注意喚起</button>
+              <button class="opt" data-val="joy" type="button">達成・喜び</button>
+            </div>
+          </div>
+
+          <div class="field" data-show="vid.mode=base">
+            <label class="lbl">設計仕様の注記</label>
+            <div class="seg-group" data-target="vid" data-key="spec">
+              <button class="opt on" data-val="on" type="button">造形比率コメントを付ける</button>
+              <button class="opt" data-val="off" type="button">付けない</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">描画スタイル <span class="hint">アニメ／実写を切替</span></label>
+            <div class="seg-group" data-target="vid" data-key="style">
+              <button class="opt on" data-val="anime" type="button">2Dアニメ</button>
+              <button class="opt" data-val="cg" type="button">3D-CG</button>
+              <button class="opt" data-val="real" type="button">実写フォト</button>
+            </div>
+          </div>
+
+          <div class="note" style="margin-top:6px">
+            動画・画像生成AIでの再現性が高い<b>英語</b>で出力します。色は16進コードで固定し、口の動きはあえて控えめ指定（細線設計が崩れにくい）にしています。
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="vid-copy" type="button">📋 プロンプトをコピー</button>
+          <button class="btn ghost sm" id="vid-dl" type="button">⬇ テキスト保存</button>
+        </div>
+        <div class="swatches" id="vid-swatches"></div>
+        <pre class="prompt-pre" id="vid-output"></pre>
+      </div>
+      <div class="note no-print"><b>ちびマスコット配色：</b>ボディ#FBF6F0／輪郭#D9C8BC（ベージュ・黒禁止）／頬・耳内#F2B8C6／鼻口#E8909E／目#1E1A1A／にんじん#E8872A／葉#5C9E3A。ブランドのローズ #8B2D4F をアクセントに。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 04 — カット割り（絵コンテ）ジェネレーター（資料13準拠）
+     ============================================================ -->
+<section class="tabpanel" id="tab-board" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">STORYBOARD</div><h2>5幕構成のカット表を組む</h2></div>
+        <div class="panel-body">
+          <div class="field"><label class="lbl">テーマ <span class="hint">この回で伝える核</span></label><input type="text" id="b_theme" value="技術共有の極意"></div>
+          <div class="field"><label class="lbl">アナウンサー名乗り</label><input type="text" id="b_anchor" value="しろうさぎアナウンサー"></div>
+          <div class="field"><label class="lbl">タイトルテロップ</label><input type="text" id="b_title" value="IT技術シェアの極意"></div>
+          <div class="field"><label class="lbl">あるある失敗（問いかけ）</label><input type="text" id="b_problem" value="せっかく最新技術をシェアしたのに、周りにポカンとされた経験はありませんか？"></div>
+          <div class="two">
+            <div class="field"><label class="lbl">シンキングタイム <span class="hint">秒</span></label><input type="text" id="b_think" value="30"></div>
+            <div class="field"><label class="lbl">スライド技術名サンプル <span class="hint">React/AWS等</span></label><input type="text" id="b_tech" placeholder="例：React／AWS（空欄可）"></div>
+          </div>
+          <div class="field"><label class="lbl">核心メッセージ（Why・メインコピー）<span class="hint">赤モニター表示</span></label><input type="text" id="b_why" value="やり方（How）より理由（Why）を売れ！"></div>
+          <div class="field"><label class="lbl">解説ポイント（3点）</label>
+            <input type="text" id="b_p1" value="導入メリットの明示" style="margin-bottom:8px">
+            <input type="text" id="b_p2" value="具体的なユースケース" style="margin-bottom:8px">
+            <input type="text" id="b_p3" value="最初の一歩（Hello World）"></div>
+          <div class="field"><label class="lbl">カイゼン提案（第3幕の具体策）</label><textarea id="b_kaizen">まずは今日学んだことを、この3点セットでメモしてみましょう。それだけで明日からの共有が劇的に楽になります。</textarea></div>
+          <div class="field"><label class="lbl">行動喚起（第4幕）</label><textarea id="b_action">あなたが今、一番チームに伝えたい技術は何ですか？ アウトプットの練習として、ぜひコメント欄で教えてくださいね。</textarea></div>
+          <details class="group">
+            <summary>📰 下部テロップ（速報バー・3本ループ）<span class="chev">▸</span></summary>
+            <div class="group-inner">
+              <input type="text" id="b_tk1" value="【速報】せっかくの勉強会、内容が難しすぎてメンバーが寝ているとの報告が多数" style="margin-bottom:8px">
+              <input type="text" id="b_tk2" value="Tips：技術仕様より先に『これで何が楽になるか』を話すのがエンジニアに刺さるコツ" style="margin-bottom:8px">
+              <input type="text" id="b_tk3" value="実践：まずは今日学んだ技術を1枚のスライドにまとめ、明日1分だけ共有しましょう">
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="b-copy" type="button">📋 カット表をコピー</button>
+          <button class="btn ghost sm" id="b-dl" type="button">⬇ Markdown保存</button>
+          <button class="btn ghost sm" id="b-print" type="button">🖨 印刷／PDF</button>
+        </div>
+        <div class="script" id="board-output"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 05 — 社内シェア記事ジェネレーター（資料14準拠）
+     ============================================================ -->
+<section class="tabpanel" id="tab-article" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">INTERNAL ARTICLE</div><h2>社内シェア記事を組む</h2></div>
+        <div class="panel-body">
+          <div class="field"><label class="lbl">記事タイトル <span class="hint">絵文字1個で始めると◎</span></label><input type="text" id="a_title" placeholder="例：🐰 技術共有で『ポカン』をなくす3本"></div>
+          <div class="two">
+            <div class="field"><label class="lbl">対象読者</label><input type="text" id="a_reader" placeholder="例：社内サブ講師"></div>
+            <div class="field"><label class="lbl">絞り込み条件</label><input type="text" id="a_narrow" placeholder="例：経験が浅い方"></div>
+          </div>
+          <div class="field"><label class="lbl">場面・タイミング</label><input type="text" id="a_scene" placeholder="例：勉強会・研修の準備中に"></div>
+          <div class="two">
+            <div class="field"><label class="lbl">執筆者</label><input type="text" id="a_author" value="石黒友季子"></div>
+            <div class="field"><label class="lbl">年月</label><input type="text" id="a_date" value="2026年"></div>
+          </div>
+          <div class="field"><label class="lbl">執筆背景・きっかけ <span class="hint">失敗談・問題意識</span></label><textarea id="a_back" placeholder="例：自分の勉強会で盛大にスベった経験から…"></textarea></div>
+          <div class="two">
+            <div class="field"><label class="lbl">参考にしたもの</label><input type="text" id="a_ref" placeholder="例：教育工学の論文・現場経験"></div>
+            <div class="field"><label class="lbl">制作ツール名</label><input type="text" id="a_tool" value="うさうさ プロンプトスタジオ"></div>
+          </div>
+          <div class="field"><label class="lbl">読者の悩み3連発 <span class="hint">「〜……」一人称・自虐ぎみに</span></label>
+            <input type="text" id="a_pain1" placeholder="悩み①" style="margin-bottom:8px">
+            <input type="text" id="a_pain2" placeholder="悩み②" style="margin-bottom:8px">
+            <input type="text" id="a_pain3" placeholder="悩み③"></div>
+
+          <details class="group" open>
+            <summary>📺 動画ラインナップ<span class="chev">▸</span></summary>
+            <div class="group-inner">
+              <div id="video-list"></div>
+              <button class="btn ghost sm" id="add-video" type="button">＋ 動画を追加</button>
+            </div>
+          </details>
+
+          <details class="group">
+            <summary>🎙️ 制作ツール紹介・おまけ<span class="chev">▸</span></summary>
+            <div class="group-inner">
+              <div class="field"><label class="lbl">ツール補足（ゆるく）</label><input type="text" id="a_toolnote" placeholder="例：ふわふわの白兎アナが解説してくれます"></div>
+              <div class="field"><label class="lbl">動画内の印象的なセリフ</label><input type="text" id="a_quote" value="面白きこともなき世を面白く。"></div>
+              <div class="field"><label class="lbl">自虐ユーモア一言</label><input type="text" id="a_joke" placeholder="例：にんじん片手に真顔で品質の話をします"></div>
+              <div class="two">
+                <div class="field"><label class="lbl">アクセス条件</label><input type="text" id="a_access" value="社内共有のGoogle Driveリンクです"></div>
+                <div class="field"><label class="lbl">権限の問い合わせ先</label><input type="text" id="a_contact" placeholder="例：石黒"></div>
+              </div>
+              <div class="field"><label class="lbl">おまけ見出し</label><input type="text" id="a_extratitle" placeholder="例：経験が浅いサブ講師の方へ"></div>
+              <div class="field"><label class="lbl">おまけメッセージ</label><textarea id="a_extra" placeholder="応援メッセージなど"></textarea></div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="a-copy" type="button">📋 記事をコピー</button>
+          <button class="btn ghost sm" id="a-dl" type="button">⬇ Markdown保存</button>
+          <span id="a-readtime" style="margin-left:auto;align-self:center;font-size:12.5px;color:var(--rose);font-weight:700"></span>
+        </div>
+        <pre class="prompt-pre" id="article-output"></pre>
+        <div style="padding:0 18px 18px">
+          <div class="scene"><div class="sc-head"><span class="sc-num">✓</span><span class="sc-name">公開前チェックリスト</span></div>
+            <div class="sc-body checklist" id="article-checklist"></div></div>
+        </div>
+      </div>
+      <div class="note no-print"><b>ファイル名の注意：</b>保存時のファイル名は英数字のみ推奨（文字化け防止）。URL・キャッチコピー・締め「気軽に試してみてください 🐰」は自動で入ります。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 06 — 画像解析（数値＋文系言語化）→ アニメ化
+     ============================================================ -->
+<section class="tabpanel" id="tab-analyze" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">IMAGE ANALYSIS</div><h2>画像を取り込んで言語化する</h2></div>
+        <div class="panel-body">
+          <div class="field">
+            <label class="lbl">画像を選ぶ <span class="hint">ブラウザ内だけで解析・送信なし</span></label>
+            <input type="file" id="an-file" accept="image/*">
+          </div>
+          <div class="field" id="an-preview-wrap" style="display:none">
+            <label class="lbl">プレビュー</label>
+            <img id="an-preview" alt="プレビュー" style="max-width:100%;border:1px solid var(--line);border-radius:10px">
+          </div>
+          <div class="field">
+            <label class="lbl">オリジナルキャラ名 <span class="hint">解析結果に名付け</span></label>
+            <input type="text" id="an-name" placeholder="例：うさうさ先生／自作キャラ名">
+          </div>
+          <div class="field">
+            <label class="lbl">言語化のレベル</label>
+            <div class="seg-group" data-target="an" data-key="level">
+              <button class="opt on" data-val="bunkei" type="button">文系向け（やさしい）</button>
+              <button class="opt" data-val="suchi" type="button">数値分析（エンジニア向け）</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="lbl">抽出する色数</label>
+            <div class="seg-group" data-target="an" data-key="k">
+              <button class="opt" data-val="4" type="button">4色</button>
+              <button class="opt on" data-val="6" type="button">6色</button>
+              <button class="opt" data-val="8" type="button">8色</button>
+            </div>
+          </div>
+          <div class="note">実測値（HEX/RGB/HSV・占有率）のみを表示します。印象語は実測トーンから機械的に導いており、根拠のない断定はしません（嘘つかない原則）。</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="an-copy" type="button">📋 解析結果をコピー</button>
+          <button class="btn sm" id="an-toprompt" type="button">🎬 この配色でアニメ化プロンプト</button>
+          <button class="btn ghost sm" id="an-dl" type="button">⬇ Markdown保存</button>
+        </div>
+        <div class="swatches" id="an-swatches"></div>
+        <div class="script" id="an-output"><p style="color:var(--muted);padding:20px">画像を選ぶと、ここに配色パレットと言語化が出ます 🐰</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 07 — AI壁打ち（APIキーはメモリのみ）
+     ============================================================ -->
+<section class="tabpanel" id="tab-chat" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">SOUNDING BOARD</div><h2>うさうさ先生と壁打ち</h2></div>
+        <div class="panel-body">
+          <div class="field">
+            <label class="lbl">APIキー <span class="hint">メモリ保持のみ・保存JSONにも含めません</span></label>
+            <input type="password" id="ai-key" placeholder="sk-ant-... （Anthropic）" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="lbl">モデル</label>
+            <select id="ai-model">
+              <option value="claude-sonnet-4-6">claude-sonnet-4-6（標準）</option>
+              <option value="claude-opus-4-8">claude-opus-4-8（高性能）</option>
+              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5（軽量）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="lbl">役回り（システム）</label>
+            <textarea id="ai-system">あなたはうさうさ研修工房の編集パートナーです。中堅エンジニア向け解説動画の企画・台本・配色・WBSの壁打ち相手として、やさしく具体的に、嘘や捏造をせず提案してください。不確かな点は不確かと述べます。</textarea>
+          </div>
+          <div class="field">
+            <label class="lbl">現在の入力を文脈に含める</label>
+            <div class="seg-group" data-target="ai" data-key="ctx">
+              <button class="opt on" data-val="on" type="button">含める</button>
+              <button class="opt" data-val="off" type="button">含めない</button>
+            </div>
+          </div>
+          <div class="note">キーはこのページのメモリ内のみで使用し、保存・送信ログは残しません。ブラウザから直接 Anthropic API を呼びます（自己責任でご利用ください）。</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn ghost sm" id="ai-clear" type="button">🧹 会話クリア</button>
+          <button class="btn ghost sm" id="ai-export" type="button">⬇ 会話を保存</button>
+        </div>
+        <div id="ai-log" style="padding:16px 18px;min-height:260px;max-height:52vh;overflow:auto"></div>
+        <div style="display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line)">
+          <textarea id="ai-input" placeholder="例：ハーネスエンジニアリングの回、フックの掴みを3案ください" style="min-height:48px"></textarea>
+          <button class="btn solid" id="ai-send" type="button">送信</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 08 — ディレクション設計書一式（要件定義/詳細設計/実装仕様/WBS/クライアント文面）
+     ============================================================ -->
+<section class="tabpanel" id="tab-doc" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">DIRECTION DOCS</div><h2>制作ドキュメント一式を組む</h2></div>
+        <div class="panel-body">
+          <div class="two">
+            <div class="field"><label class="lbl">案件名</label><input type="text" id="d_project" value="ハーネスエンジニアリングの真髄"></div>
+            <div class="field"><label class="lbl">クライアント</label><input type="text" id="d_client" placeholder="例：社内DX推進部"></div>
+          </div>
+          <div class="two">
+            <div class="field"><label class="lbl">監督（自分）</label><input type="text" id="d_director" value="石黒友季子"></div>
+            <div class="field"><label class="lbl">納期</label><input type="text" id="d_due" placeholder="例：2026/07/31"></div>
+          </div>
+          <div class="field"><label class="lbl">目的・背景</label><textarea id="d_goal" placeholder="例：中堅エンジニアに『性能の律速はハーネス』という原理原則を定着させる">中堅エンジニアに、原理原則と実践を結びつけて理解してもらう解説動画を制作する。</textarea></div>
+          <div class="two">
+            <div class="field"><label class="lbl">ターゲット</label><input type="text" id="d_target" value="中堅エンジニア"></div>
+            <div class="field"><label class="lbl">動画本数</label><input type="text" id="d_count" value="1"></div>
+          </div>
+          <div class="field"><label class="lbl">主要シーン・機能（改行区切り）</label><textarea id="d_features" placeholder="例：原理原則の提示&#10;6成分モデルの図解&#10;実践ガイド">原理原則の提示（性能の律速はハーネス）&#10;6成分モデル H=(E,T,C,S,L,V) の図解&#10;実践ガイド（ハーネス修正の優先・計装L）</textarea></div>
+          <div class="field"><label class="lbl">制約・絶対遵守</label><textarea id="d_constraint">新規描画禁止（ソース画像＋カメラワークのみ）／PoCは「ピーオーシー」発音／決めゼリフ固定／嘘つかない原則。</textarea></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn sm" id="doc-which" type="button" style="pointer-events:none;border-color:transparent;color:var(--muted)">表示：</button>
+          <div class="seg-group" data-target="doc" data-key="view" style="display:inline-flex">
+            <button class="opt on" data-val="req" type="button">要件定義</button>
+            <button class="opt" data-val="design" type="button">詳細設計</button>
+            <button class="opt" data-val="impl" type="button">実装仕様</button>
+            <button class="opt" data-val="wbs" type="button">WBS</button>
+            <button class="opt" data-val="client" type="button">クライアント文面</button>
+          </div>
+        </div>
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="doc-copy" type="button">📋 コピー</button>
+          <button class="btn ghost sm" id="doc-md" type="button">⬇ Markdown</button>
+          <button class="btn ghost sm" id="doc-csv" type="button">⬇ WBSをExcel(CSV)</button>
+          <button class="btn ghost sm" id="doc-print" type="button">🖨 PDF（全部）</button>
+        </div>
+        <div class="script" id="doc-output"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 09 — キャラ登録プリセット（複数キャラを切替保存）
+     ============================================================ -->
+<section class="tabpanel" id="tab-preset" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">CHARACTER PRESETS</div><h2>キャラを登録して切り替える</h2></div>
+        <div class="panel-body">
+          <div class="field">
+            <label class="lbl">登録済みキャラ <span class="hint">クリックで切替</span></label>
+            <div id="preset-chips"></div>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn ghost sm" id="preset-new" type="button">＋ 新規</button>
+              <button class="btn ghost sm" id="preset-dup" type="button">⧉ 複製</button>
+              <button class="btn ghost sm" id="preset-del" type="button">🗑 削除</button>
+            </div>
+          </div>
+          <div class="field"><label class="lbl">キャラ名</label><input type="text" id="ps-name"></div>
+          <div class="two">
+            <div class="field"><label class="lbl">役割</label><input type="text" id="ps-role" placeholder="例：報道アナウンサー"></div>
+            <div class="field"><label class="lbl">アートスタイル</label><input type="text" id="ps-style" placeholder="例：フラット2Dアニメ"></div>
+          </div>
+          <div class="field"><label class="lbl">音声・口調</label><input type="text" id="ps-voice" placeholder="例：落ち着いた女性・です/ます調"></div>
+          <div class="field"><label class="lbl">決めゼリフ</label><input type="text" id="ps-closing"></div>
+          <div class="field"><label class="lbl">禁止事項（NG）</label><textarea id="ps-ng" placeholder="例：3D・写実・スーツ色変更・にんじん省略"></textarea></div>
+          <div class="field">
+            <label class="lbl">カラーパレット <span class="hint">役割名＋色</span></label>
+            <div id="pal-list"></div>
+            <button class="btn ghost sm" id="pal-add" type="button">＋ 色を追加</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="ps-copy" type="button">📋 設計書をコピー</button>
+          <button class="btn sm" id="ps-tovideo" type="button">🎬 この配色で動画プロンプト</button>
+          <button class="btn ghost sm" id="ps-dl" type="button">⬇ Markdown保存</button>
+        </div>
+        <div class="swatches" id="ps-swatches"></div>
+        <div class="script" id="preset-output"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 10 — 制作依頼口上（しろうさぎアナウンサーの発注ひな形）
+     ============================================================ -->
+<section class="tabpanel" id="tab-request" role="tabpanel">
+  <div class="wrap">
+    <div class="no-print">
+      <div class="panel">
+        <div class="panel-head"><div class="eyebrow">PRODUCTION BRIEF</div><h2>制作開始の口上を組む</h2></div>
+        <div class="panel-body">
+          <div class="field"><label class="lbl">動画タイトル</label><input type="text" id="r_title" value="ハーネスエンジニアリングの真髄：原理原則と実践"></div>
+          <div class="two">
+            <div class="field"><label class="lbl">対象視聴者</label><input type="text" id="r_audience" value="中堅エンジニア"></div>
+            <div class="field"><label class="lbl">PiP固定画像</label><input type="text" id="r_pip" value="ふわふわ白兎メルヘンでアナウンサー.png"></div>
+          </div>
+          <div class="field"><label class="lbl">核心① 原理原則</label><input type="text" id="r_core1" value="「性能の律速はモデルではなくハーネスにある」という実証データに基づく核心"></div>
+          <div class="field"><label class="lbl">核心② モデル／フレーム</label><textarea id="r_core2">6成分モデル H=(E,T,C,S,L,V)（実行ループ・ツール・文脈・状態・ライフサイクル・評価）の各役割</textarea></div>
+          <div class="field"><label class="lbl">核心③ 実践ガイド</label><textarea id="r_core3">モデル変更よりハーネス修正を優先する理由、自動最適化（Meta-Harness）、計装(L)のロギング実装例</textarea></div>
+          <div class="field"><label class="lbl">アナウンサーの一言（締め）</label><textarea id="r_signoff">中堅エンジニアの皆様へ、最強の『足場』を築くための極意、しっかりとお届けいたしますわ。</textarea></div>
+          <div class="note">声・発音・決めゼリフ・名乗りは「01 台本」のグローバル設定から自動で引き込みます。</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="preview-actions no-print">
+          <button class="btn solid sm" id="r-copy" type="button">📋 口上をコピー</button>
+          <button class="btn ghost sm" id="r-dl" type="button">⬇ Markdown保存</button>
+        </div>
+        <div class="script" id="request-output"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <p class="help no-print">完全オフラインで動作します（外部通信・データ送信なし）。入力はこのページ内にのみ保持され、再読み込みで消えます。</p>
+  <p><span class="stamp">🐰 うさうさ研修工房</span> ／ プロンプトスタジオ <span id="ver"></span></p>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- 使い方オーバーレイ -->
+<div class="overlay no-print" id="help-overlay" role="dialog" aria-label="使い方">
+  <div class="help-card">
+    <h3>🐰 使い方ガイド <button class="btn ghost sm hc-close" id="help-close" type="button">閉じる</button></h3>
+    <div class="hc-body">
+      <p>各タブは入力すると右側に結果が自動生成されます。コピー／保存ボタンで持ち出せます。<b>完全オフライン・外部送信なし</b>です。</p>
+      <h4>共通の操作</h4>
+      <p>💾 保存：全タブの入力をJSON 1枚に保存。📂 復元：そのJSONを読み込むと元通りに戻ります（APIキーは保存されません）。</p>
+      <p>🔕/🔔 鈴：ボタンのクリック音を ON/OFF します。🐞 左下のテントウムシ：気づき・バグをメモ（保存JSONに同梱・CSV出力可）。</p>
+      <p>🎬 サンプル：白兎アナのニュース番組サンプルを読み込み（起動時は自動で入っています）。🧹 クリア：入力を空にします。</p>
+      <h4>01 台本</h4><p>スキル名や比喩を入れると、5幕構成の完成台本とチェックリストができます。</p>
+      <h4>02 画像プロンプト</h4><p>ポーズ・表情・背景に加え、<b>描画スタイル（2Dアニメ／3D-CG／実写フォト）</b>を選べます。色コード入りプロンプトを日英で出力。</p>
+      <h4>03 動画・アニメ</h4><p>静止画/ループ/ジェスチャー/トーキング＋<b>アニメ／実写スタイル</b>を選んで動画AI用プロンプトを出力。</p>
+      <h4>04 カット割り</h4><p>テーマや核心(Why)を入れると、5幕のカット表（配色・カメラワーク付き）に。</p>
+      <h4>05 社内記事</h4><p>動画を足すと、社内シェア用Markdown記事と読了時間・公開前チェックを生成。</p>
+      <h4>06 画像解析</h4><p>画像を選ぶと、ブラウザ内だけで実測カラー（HEX/HSV/占有率）を抽出。文系向け／数値分析を切替でき、その配色でアニメ化プロンプトも作れます。</p>
+      <h4>07 AI壁打ち</h4><p>自分のAPIキー（メモリのみ）を入れて、企画の相談相手に。</p>
+      <h4>08 設計書一式</h4><p>要件定義／詳細設計／実装仕様／WBS／クライアント文面を生成。Excel(CSV)・PDF出力可。</p>
+      <h4>09 キャラ登録</h4><p>複数キャラをプリセット登録して切替・保存。パレットを編集して、その配色で動画プロンプトへ流せます。</p>
+      <h4>10 制作依頼</h4><p>「しろうさぎアナウンサーが制作を開始します」という発注口上のひな形を生成。声・発音・決めゼリフは01から自動連携します。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 🐞 テントウムシ：バグ・気づきメモ -->
+<button class="ladybug no-print" id="ladybug" title="バグ・気づきメモ" aria-label="バグメモを開く">🐞<span class="count" id="bug-count" style="display:none">0</span></button>
+<div class="bugpanel no-print" id="bugpanel" role="dialog" aria-label="バグ・気づきメモ">
+  <h3>🐞 テントウムシ・メモ <button class="btn ghost sm" id="bug-csv" type="button" style="margin-left:auto">CSV</button></h3>
+  <div class="bp-body">
+    <div class="field">
+      <div class="seg-group" data-target="bug" data-key="sev" style="margin-bottom:8px">
+        <button class="opt on" data-val="バグ" type="button">バグ</button>
+        <button class="opt" data-val="要改善" type="button">要改善</button>
+        <button class="opt" data-val="気づき" type="button">気づき</button>
+      </div>
+      <textarea id="bug-text" placeholder="気づいたこと・直したいことをメモ（保存JSONに同梱されます）"></textarea>
+      <button class="btn solid sm" id="bug-add" type="button" style="margin-top:8px;width:100%">＋ 記録する</button>
+    </div>
+    <div id="bug-list"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================
+   嘘つかない原則：入力をそのまま整形するだけで、
+   事実・出典・数値は自動生成（捏造）しません。
+   =========================================================== */
+const VERSION = "v5.0 PRO シネマ / 2026-06-24";
+document.getElementById("ver").textContent = VERSION;
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* ---- タブ切替 ---- */
+function showTab(name){
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  const id="tab-"+name;
+  document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id===id));
+}
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>showTab(btn.dataset.tab));
+});
+
+/* ---- 汎用：セグメント選択 ---- */
+const STATE = {
+  img:{lang:"ja",kind:"single",pose:"front",expr:"normal",bg:"white",checklist:"on",style:"anime"},
+  vid:{mode:"base",gesture:"greet",spec:"on",style:"anime"},
+  an:{level:"bunkei",k:"6"},
+  ai:{ctx:"on"},
+  doc:{view:"req"},
+  bug:{sev:"バグ"}
+};
+document.querySelectorAll(".seg-group").forEach(g=>{
+  const target=g.dataset.target, key=g.dataset.key;
+  g.querySelectorAll(".opt").forEach(opt=>{
+    opt.addEventListener("click",()=>{
+      g.querySelectorAll(".opt").forEach(o=>o.classList.toggle("on",o===opt));
+      STATE[target][key]=opt.dataset.val;
+      applyVisibility();
+      if(target==="img") renderImage();
+      if(target==="vid") renderVideo();
+      if(target==="an" && window.__lastAnalysis) renderAnalyze();
+      if(target==="doc") renderDoc();
+    });
+  });
+});
+/* data-show="img.kind=single" の表示制御 */
+function applyVisibility(){
+  document.querySelectorAll("[data-show]").forEach(el=>{
+    const [path,val]=el.dataset.show.split("=");
+    const [t,k]=path.split(".");
+    el.style.display = (STATE[t][k]===val) ? "" : "none";
+  });
+}
+
+/* ===========================================================
+   TAB 01 — 台本
+   =========================================================== */
+const IMAGES = {
+  base:"画像1：ふわふわ白兎メルヘンでアナウンサー.png",
+  hook:"画像2：①視聴者への問題提起.png",
+  open:"画像3：②今日のテーマ.png",
+  theme:"画像4：③のスキルを追加しよう.png",
+  pip:"画像5：手を振る・片手にマイク.png"
+};
+let metaphors=[], mid=0;
+function defaultRow(kind){return {id:++mid,term:"",figure:"",body:"",kind:kind||"why"};}
+function addMetaphor(kind){metaphors.push(defaultRow(kind));renderMetaphors();render();}
+function renderMetaphors(){
+  const list=document.getElementById("metaphor-list"); list.innerHTML="";
+  metaphors.forEach((m,i)=>{
+    const row=document.createElement("div"); row.className="metaphor-row";
+    row.innerHTML=`
+      <div class="row-top">
+        <span class="tag ${m.kind}">解説${i+1}・${m.kind==="why"?"Why（核心）":"How（カイゼン）"}</span>
+        <span class="seg" role="group" aria-label="WhyかHow">
+          <button type="button" data-v="why" class="${m.kind==="why"?"on":""}">Why</button>
+          <button type="button" data-v="how" class="${m.kind==="how"?"on":""}">How</button>
+        </span>
+        <button type="button" class="del-row" title="削除" aria-label="削除">×</button>
+      </div>
+      <div class="mini-grid">
+        <input type="text" class="m-term" placeholder="専門用語・概念（例：敵対的テスト）" value="${esc(m.term)}">
+        <input type="text" class="m-figure" placeholder="比喩（例：自分の城を自分で攻める）" value="${esc(m.figure)}">
+      </div>
+      <textarea class="m-body" placeholder="この概念の解説（比喩の構造を保ったまま噛み砕く）">${esc(m.body)}</textarea>`;
+    row.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{m.kind=b.dataset.v;renderMetaphors();render();}));
+    row.querySelector(".del-row").addEventListener("click",()=>{metaphors=metaphors.filter(x=>x.id!==m.id);renderMetaphors();render();});
+    row.querySelector(".m-term").addEventListener("input",e=>{m.term=e.target.value;render();});
+    row.querySelector(".m-figure").addEventListener("input",e=>{m.figure=e.target.value;render();});
+    row.querySelector(".m-body").addEventListener("input",e=>{m.body=e.target.value;render();});
+    list.appendChild(row);
+  });
+}
+function gather(){
+  const v=id=>(document.getElementById(id).value||"").trim();
+  return {program:v("g_program")||"しろうさぎニュース",anchor:v("g_anchor")||"うさうさアナウンサー",
+    core:v("g_core"),voice:v("g_voice"),closing:v("g_closing"),pron:v("g_pron"),
+    skill:v("e_skill"),sub:v("e_sub"),problem:v("e_problem"),conclusion:v("e_conclusion"),
+    action:v("e_action"),metaphors:metaphors};
+}
+function ph(val,p){return val?esc(val):`<span class="ph">{${p}}</span>`;}
+function phText(val,p){return val?val:`{${p}}`;}
+function explainNarration(d){
+  if(d.metaphors.length===0) return "比喩対応表を1行追加すると、ここに WHY→HOW の解説が入ります。";
+  return d.metaphors.map((m,i)=>{
+    const head=m.kind==="why"?"まず、核心からお伝えします。":"では、どう動くか。具体策です。";
+    const term=m.term?`「${m.term}」`:"（概念）";
+    const fig=m.figure?`これは、${m.figure}——そんなイメージです。`:"";
+    const body=m.body||"（ここに解説が入ります）";
+    return `【解説${i+1}・${m.kind==="why"?"Why":"How"}】 ${head}\n${term}。${fig}\n${body}`;
+  }).join("\n\n");
+}
+function buildScenes(d){
+  const expl=explainNarration(d);
+  const hasWhy=d.metaphors.some(m=>m.kind==="why");
+  return [
+    {num:"0",name:"フック：問題提起",color:"red",colorLabel:"赤・重要",img:IMAGES.hook,
+     narrationHTML:`突然ですが、皆さん。${ph(d.problem,"お悩み")}——そんなお悩みはありませんか。\nその原因、実は『${ph(d.skill,"SKILL_NAME")}』が足りていないのかもしれません。`,
+     stage:"少し困った表情でカメラへ問いかけ。"},
+    {num:"1",name:"オープニング：名乗り",color:"blue",colorLabel:"青・通常",img:IMAGES.open,
+     narrationHTML:`こんにちは。${esc(d.anchor)}です。本日のテーマはこちら。`,stage:"耳をぴこりと動かし、明るく挨拶。"},
+    {num:"2",name:"テーマ提示",color:"blue",colorLabel:"青・通常",img:IMAGES.theme,
+     narrationHTML:`本日のニュース、『${ph(d.skill,"SKILL_NAME")}のスキルを追加しよう！ 〜${ph(d.sub,"SUBTITLE")}〜』。\n結論から申し上げます。${ph(d.conclusion,"結論の先出し")}`,
+     stage:"テーマパネルへズームイン。"},
+    {num:"3",name:"解説1〜3：Why → How",color:(hasWhy?"red":"blue"),colorLabel:(hasWhy?"赤→青":"青"),
+     img:`メイン ${IMAGES.base.split("：")[0]}／小窓 ${IMAGES.pip.split("：")[0]}（固定開始）`,
+     narrationHTML:expl,stage:"ここから小窓（PiP）を右下に固定。Whyは赤・Howは青へ配色を切替。"},
+    {num:"4",name:"行動喚起",color:"blue",colorLabel:"青・通常",img:`小窓 ${IMAGES.pip.split("：")[0]}`,
+     narrationHTML:`${ph(d.action,"ACTION_PROMPT")}`,stage:"小窓のうさうさが視聴者へ語りかける。"},
+    {num:"5",name:"エンディング",color:"blue",colorLabel:"青・通常",img:IMAGES.pip,
+     narrationHTML:`最後に。${ph(d.core,"核心メッセージ")}——これだけは忘れないでください。\n${ph(d.closing,"決めゼリフ")}`,
+     stage:"笑顔で手を振り、穏やかにホワイトアウト。"}
+  ];
+}
+function checklistScript(){return [
+  "見た目（白い毛並み／耳内側ピンク／頬の赤み・紺スーツ／赤蝶ネクタイ／白シャツ）は固定どおりか？",
+  "リアル質感・3D化の混入はないか（フラット二次元日本風アニメを維持）？",
+  "発音指定どおりに読まれているか？",
+  "口調は「です・ます調」で統一されているか（過度なキャラ付けなし）？",
+  "解説は1シーン1概念に絞られているか？",
+  "比喩は構造（原因／結果・リスク／対策）を保ったまま対応しているか？",
+  "小窓（PiP）は解説シーンから固定され続けているか？",
+  "配色（青＝通常・赤＝核心）とシーンの意味づけが一致しているか？",
+  "核心メッセージは語られ、決めゼリフは完全一致か？"
+];}
+function render(){
+  const d=gather(); const out=document.getElementById("script-output");
+  let html=`<div class="title-card"><div class="kicker">本日のニュース</div>
+    <h3>『${ph(d.skill,"SKILL_NAME")}のスキルを追加しよう！ 〜${ph(d.sub,"SUBTITLE")}〜』</h3>
+    <div class="meta">番組：${esc(d.program)}　／　進行：${esc(d.anchor)}　／　核心：${ph(d.core,"核心メッセージ")}</div></div>`;
+  buildScenes(d).forEach(s=>{
+    html+=`<div class="scene"><div class="sc-head"><span class="sc-num">${s.num}</span>
+      <span class="sc-name">${s.name}</span><span class="sc-chips">
+      <span class="chip ${s.color}">${s.colorLabel}</span><span class="chip img">${s.img}</span></span></div>
+      <div class="sc-body"><p class="narration">${s.narrationHTML}</p>${s.stage?`<p class="stage">▶ ${s.stage}</p>`:""}</div></div>`;
+  });
+  html+=`<div class="scene"><div class="sc-head"><span class="sc-num">✓</span><span class="sc-name">品質チェックリスト</span></div>
+    <div class="sc-body checklist">${checklistScript().map(c=>`<label><input type="checkbox">${esc(c)}</label>`).join("")}</div></div>
+    <div class="note"><b>嘘つかない原則：</b>このツールは入力をそのまま整形するだけで、事実・出典・数値の自動生成（捏造）はしません。数値や論文を引く場合は、実在する出典をご自身で確認のうえ追記してください。</div>`;
+  out.innerHTML=html;
+}
+function htmlToText(html){const t=document.createElement("div");t.innerHTML=html;return t.textContent||"";}
+function buildScriptMarkdown(d){
+  const L=[];
+  L.push(`# ${d.program}｜台本：${phText(d.skill,"SKILL_NAME")}`,``);
+  L.push(`- サブキャッチ：${phText(d.sub,"SUBTITLE")}`,`- 進行：${d.anchor}`);
+  L.push(`- 核心メッセージ：${phText(d.core,"核心メッセージ")}`,`- 音声：${d.voice}`,`- 発音指定：${d.pron}`);
+  L.push(`- 決めゼリフ（固定）：${phText(d.closing,"決めゼリフ")}`,``);
+  L.push(`## 使用画像（並び順＝編集タイムライン）`,`画像2 → 画像3 → 画像4 → 画像1 → 画像5`,``);
+  L.push(`## 完成台本`);
+  buildScenes(d).forEach(s=>{L.push(``,`### [${s.num}] ${s.name}　／　配色：${s.colorLabel}`,`画像：${s.img}`,``,htmlToText(s.narrationHTML));if(s.stage)L.push(`（演出：${s.stage}）`);});
+  L.push(``,`## 品質チェックリスト`); checklistScript().forEach(c=>L.push(`- [ ] ${c}`));
+  L.push(``,`---`,`🐰 うさうさ研修工房／しろうさぎニュース 台本ジェネレーター ${VERSION}`,
+    `※嘘つかない原則：事実・出典・数値は自動生成しません。実在する出典を確認のうえ追記してください。`);
+  return L.join("\n");
+}
+function buildScriptTemplate(d){
+  const expl=d.metaphors.length?d.metaphors.map((m,i)=>`  解説${i+1}（${m.kind==="why"?"赤/Why":"青/How"}）：${m.term||"{用語}"}＝${m.figure||"{比喩}"}`).join("\n"):"  解説1〜3：{METAPHOR} でWHY→HOWを解説";
+  return [
+`[グローバル]`,`服装：紺スーツ／赤蝶ネクタイ／白シャツ（固定）`,`アートスタイル：フラット二次元日本風アニメ（リアル質感禁止）`,
+`音声：${d.voice}`,`発音：${d.pron}`,`核心メッセージ：${phText(d.core,"核心メッセージ")}`,`決めゼリフ：${phText(d.closing,"決めゼリフ")}`,``,
+`[0. フック] 画像2／赤`,`「突然ですが、皆さん。${phText(d.problem,"お悩み")}…その原因、実は${phText(d.skill,"SKILL_NAME")}不足かもしれません！」`,``,
+`[1. オープニング] 画像3／青`,`「こんにちは！${d.anchor}です！今回のテーマはこちら」`,``,
+`[2. テーマ提示] 画像4／青`,`「本日のニュース、『${phText(d.skill,"SKILL_NAME")}のスキルを追加しよう！〜${phText(d.sub,"SUBTITLE")}〜』。結論：${phText(d.conclusion,"結論")}」`,``,
+`[3. 解説1〜3] メイン:画像1／小窓:画像5(固定開始)／赤→青`,expl,``,
+`[4. 行動喚起] 小窓:画像5`,`「${phText(d.action,"ACTION_PROMPT")}」`,``,
+`[5. エンディング] 画像5（メイン展開）／青`,`核心メッセージ再強調＋決めゼリフ「${phText(d.closing,"決めゼリフ")}」`
+  ].join("\n");
+}
+
+/* ===========================================================
+   TAB 02 — 画像プロンプト（資料11準拠）
+   =========================================================== */
+const IMG_SWATCHES=[["体毛","#FDF5EE"],["線","#2D2A24"],["スーツ","#334469"],["蝶ﾈｸﾀｲ","#AF3533"],["ボタン","#E8AD44"],["頬","#FFC7CF"],["にんじん","#F78430"]];
+const POSE={
+  ja:{front:"正面向き。視聴者を正視し、両手（前足）を机に置く。",
+      side:"横向き（左を向いた90°側面）。マイクが前方に位置し、にんじんが横から見える。",
+      back:"後ろ向き。ネイビースーツの背中と、ふわふわの白い後頭部・長い耳が見える。",
+      hand:"正面向きで、片手（前足）を斜め上へ元気よく挙げる。挙げた手の周囲に赤い集中線を3本。もう片方の手は机に置く。"},
+  en:{front:"Front view, facing the viewer directly, both paws resting on the desk.",
+      side:"Side view (90-degree left profile), microphone positioned in front, carrot visible from the side.",
+      back:"Back view showing the back of the navy suit jacket; round fluffy white head and tall ears visible from behind.",
+      hand:"Front-facing, raising one paw upward enthusiastically with 3 small red motion/emphasis lines around it; the other paw rests on the desk."}
+};
+const EXPR={
+  ja:{normal:"通常表情、小さな口。",smile:"笑顔、目が弧を描く。",surprise:"目を大きく見開いた驚き顔（ハイライトのきらめき）。",worried:"困り顔、眉を少し傾け、小さな汗マーク。",serious:"真剣な表情、口は一文字。"},
+  en:{normal:"neutral expression, small mouth.",smile:"happy smile, eyes slightly curved.",surprise:"surprised expression, eyes wide open with a highlight sparkle.",worried:"worried expression, eyebrows slightly angled, a small sweat drop.",serious:"serious focused expression, straight neutral mouth."}
+};
+const BG={
+  ja:{white:"背景は白一色（机と小道具以外のスタジオ要素なし）。",
+      studio:"背景：プロのテレビニュース局スタジオ。ダークネイビー(#334469)ベース、ブルーLEDのアンビエント照明、湾曲した大型モニター（NEWS映像）。背景もフラット2Dアニメ風（写真・3D禁止）。全体トーン：ネイビー・ゴールド・ホワイト。"},
+  en:{white:"Plain white background, no studio elements except the desk and props.",
+      studio:"Background: professional TV news studio interior, dark navy (#334469) with blue LED ambient lighting and large curved screens showing NEWS graphics; slightly desaturated, flat 2D anime style maintained for the background; overall tone navy / gold / crisp white."}
+};
+const STYLE_JA={
+  anime:"完全フラット2Dアニメ／均一なアウトライン #2D2A24／グラデなしの単純な塗り分け／3D・リアル表現は禁止。",
+  cg:"上質な3D-CGレンダリング（ピクサー風）／柔らかな大域照明／毛と布のサブサーフェス表現／かわいい頭身は維持／写真ではなくCG。",
+  real:"フォトリアルな実写調／本物の毛並みと生地の質感／映画的なスタジオ照明／放送用カメラ撮影／被写界深度は浅め。"
+};
+const STYLE_EN={
+  anime:"strictly flat 2D anime illustration, clean uniform outlines (#2D2A24), minimal flat shading (no gradients). NO 3D, NO realistic textures, NO photorealistic style.",
+  cg:"polished 3D CG render (Pixar-like), soft global illumination, subsurface scattering on the fur, kawaii proportions kept; a rendered CG look (not a photo).",
+  real:"photorealistic live-action look: realistic fur and fabric textures, cinematic broadcast-studio lighting, shot on a professional camera, shallow depth of field."
+};
+function imgChecklist(){return [
+  "体毛はウォームオフホワイト（純白でも灰色でもない）","アウトラインはダークブラウン（黒ではない）",
+  "スーツはネイビー（黒・グレー・明るい青ではない）","蝶ネクタイはディープレッド（ピンクや鮮やかな赤ではない）",
+  "ゴールドボタンが確認できる","机のNEWSプレートが見える","にんじんが机の上にある","マイクスタンドがある",
+  "完全フラット2D（3Dシェーディングなし）","大頭デザイン（頭部が全体の50%超）","両頬のピンク丸がある","耳の内側がサーモンピンク"
+];}
+function buildImagePrompt(){
+  const s=STATE.img;
+  const out=[];
+  if(s.kind==="sheet"){
+    if(s.lang==="ja"){
+      out.push(
+`「しろうさぎアナウンサー」のキャラクターデザイン設定シートを作成してください。`,
+``,
+`レイアウト（白背景）：`,
+`  上段： 横（サイドビュー）・正面・後ろ`,
+`  下段中央： 手を上げる`,
+`各ビューに日本語ラベル（横 / 正面 / 後ろ / 手を上げる）を記載。`,
+``,
+`キャラクター：ふわふわの白ウサギアナウンサー（体毛 #FDF5EE、アウトライン #2D2A24）。`,
+`ネイビースーツ #334469、赤い蝶ネクタイ #AF3533、ゴールドのボタン #E8AD44、白シャツの衿。`,
+`木製のニュースデスク（"NEWS"プレート）、机上にオレンジのにんじん、左にビンテージマイクスタンド。`,
+``,
+`スタイル：${STYLE_JA[s.style]} 全ビューで比率を統一。背景は白一色。`);
+    }else{
+      out.push(
+`Create a character design reference sheet for "Shiro Usagi Announcer".`,
+``,
+`Layout (white background), views in a grid:`,
+`  Top row: Side (横) / Front (正面) / Back (後ろ)`,
+`  Bottom center: Hand Raise (手を上げる)`,
+`Label each view in Japanese (横 / 正面 / 後ろ / 手を上げる).`,
+``,
+`Character: fluffy white rabbit announcer (body #FDF5EE, outline #2D2A24) in a navy suit (#334469),`,
+`red bow tie (#AF3533), gold buttons (#E8AD44), white shirt collar; sitting behind a "NEWS" wooden desk`,
+`with an orange carrot prop and a vintage microphone stand.`,
+``,
+`Style: ${STYLE_EN[s.style]} Consistent proportions across all views. White background.`);
+    }
+  }else{
+    if(s.lang==="ja"){
+      out.push(
+`フラット2Dアニメスタイルの可愛い白いウサギ「しろうさぎアナウンサー」を描いてください。`,
+``,
+`【外見】`,
+`・ふわふわで雲のような凹凸テクスチャの白い体毛（ウォームオフホワイト #FDF5EE、純白ではない）`,
+`・大きな丸い黒目（#2D2A24、白いハイライト点あり）、ほとんど見えない小さな口`,
+`・両頬に丸いピンクのほっぺ #FFC7CF／小さいピンクの鼻 #D4939A`,
+`・高くて先が丸い耳（内側はサーモンピンク #EDA8A8）`,
+`・大頭デザイン（頭部が全体の50%超）`,
+``,
+`【衣装】`,
+`・ネイビーのスーツジャケット #334469（黒・グレー不可）`,
+`・赤い蝶ネクタイ #AF3533（明るい赤ではなくワイン寄り）／ゴールドのボタン2個 #E8AD44／白シャツの衿`,
+``,
+`【シーン】`,
+`・木製のニュースデスク（前面に"NEWS"プレート）／机上にオレンジのにんじん #F78430／左にマイクスタンド`,
+``,
+`【ポーズ】 ${POSE.ja[s.pose]}`,
+`【表情】 ${EXPR.ja[s.expr]}`,
+`【背景】 ${BG.ja[s.bg]}`,
+``,
+`【スタイル】 ${STYLE_JA[s.style]}`);
+    }else{
+      out.push(
+`A cute flat 2D anime-style white fluffy rabbit character named "Shiro Usagi Announcer", sitting behind a wooden news desk. The rabbit has:`,
+`- Round fluffy body with cloud-like bumpy fur texture, warm off-white color (#FDF5EE, not pure white)`,
+`- Large round black eyes (#2D2A24) with white highlight dots, a tiny barely-visible mouth`,
+`- Pink rosy cheeks (#FFC7CF) and a small pink nose (#D4939A)`,
+`- Tall rounded ears with salmon-pink inner ear (#EDA8A8)`,
+`- Large head (over 50% of the body), kawaii Japanese anime proportions`,
+`- Navy blue suit jacket (#334469, NOT black/grey) with a deep wine-red bow tie (#AF3533) and gold buttons (#E8AD44), white shirt collar (#F8F4EF)`,
+`- "NEWS" wooden nameplate on the desk front, an orange carrot (#F78430) on the desk, a vintage microphone stand to the left`,
+``,
+`Pose: ${POSE.en[s.pose]}`,
+`Expression: ${EXPR.en[s.expr]}`,
+`Background: ${BG.en[s.bg]}`,
+``,
+`Style: ${STYLE_EN[s.style]}`);
+    }
+  }
+  if(s.checklist==="on"){
+    out.push(``,(s.lang==="ja"?"― 一貫性チェックリスト（生成後に確認）―":"-- Consistency checklist (verify after generation) --"));
+    imgChecklist().forEach(c=>{
+      let item=c;
+      if(s.style!=="anime"){
+        if(c.includes("完全フラット2D")) item=(s.style==="cg"?"3D-CG調で統一されているか（写真ではない）":"実写フォト調で統一されているか");
+      }
+      out.push("[ ] "+item);
+    });
+  }
+  return out.join("\n");
+}
+function renderImage(){
+  document.getElementById("img-output").textContent=buildImagePrompt();
+  document.getElementById("img-swatches").innerHTML=IMG_SWATCHES.map(([n,c])=>`<span class="sw"><i style="background:${c}"></i>${n} ${c}</span>`).join("");
+}
+
+/* ===========================================================
+   TAB 03 — 動画・アニメプロンプト（資料12準拠）
+   =========================================================== */
+const VID_SWATCHES=[["ボディ","#FBF6F0"],["輪郭","#D9C8BC"],["頬/耳内","#F2B8C6"],["鼻口","#E8909E"],["目","#1E1A1A"],["にんじん","#E8872A"],["葉","#5C9E3A"]];
+const GESTURE={
+  greet:"Character waves one paw and gives a small bow, friendly greeting motion, big eyes blinking happily.",
+  explain:"Character points upward with one paw as if explaining a point, nodding gently, attentive expression.",
+  surprise:"Character's ears suddenly stand straight up, eyes widen slightly, surprised but cute reaction, quick subtle motion.",
+  joy:"Character hops slightly and raises the carrot above its head, joyful bounce, optional sparkle effect."
+};
+const VSTYLE={anime:"flat 2D anime style",cg:"polished 3D CG (Pixar-like) style",real:"photorealistic live-action style (realistic fur/fabric, cinematic studio lighting)"};
+function vstyleLine(){const s=STATE.vid.style;return `\nRender style: ${VSTYLE[s]}${s==="anime"?".":" — not flat 2D."}`;}
+function buildVideoPrompt(){
+  const s=STATE.vid;
+  return buildVideoCore(s)+vstyleLine();
+}
+function buildVideoCore(s){
+  if(s.mode==="base"){
+    const head = s.spec==="on" ? [
+`// Design spec — proportions: body width = H x 0.85, ear height = H x 0.25,`,
+`// eye radius = W x 0.10 (large circular eyes), highlight = eyeR x 0.34 (upper-right),`,
+`// horizontal oval blush at 70% opacity, fur = small overlapping circles along the silhouette.`,``
+    ].join("\n") : "";
+    return head+
+`A cute chibi rabbit mascot character, kawaii flat vector illustration.
+Body color warm off-white (#FBF6F0), soft thin outline in beige (#D9C8BC, 2-3px),
+large perfectly circular eyes (radius about 10% of body width), black eyes (#1E1A1A)
+with a large highlight dot in the upper right, horizontal oval blush on cheeks
+(#F2B8C6, 70% opacity), small rose-pink nose and upward curved mouth (#E8909E),
+vertical oval ears with pink inner color, fluffy fur texture made of small
+overlapping circles along the body silhouette, holding an orange carrot (#E8872A)
+with green leaves (#5C9E3A), centered composition, plain light background,
+soft rounded shapes, no sharp edges, 1:1 square format`;
+  }
+  if(s.mode==="idle"){
+    return `[image-to-video / idle loop]
+Animate this character with a subtle idle loop: gentle blink every 3 seconds,
+slight ear twitch, soft up-and-down breathing motion in the body, carrot held
+steady in hand, no camera movement, no background change, smooth slow motion,
+seamless loop, cute and calm mood`;
+  }
+  if(s.mode==="gesture"){
+    const label={greet:"挨拶・オープニング",explain:"説明・解説",surprise:"驚き・注意喚起",joy:"達成・喜び"}[s.gesture];
+    return `[gesture motion — ${label}]
+${GESTURE[s.gesture]}
+Keep the usausa thin-line design; motion stays gentle so the fine outline does not break.`;
+  }
+  // news talking
+  return `[news anchor — talking motion]
+Character positioned center-left like a news anchor, mouth moves in a simple
+talking animation synced to speech, occasional blink, ears stay mostly still
+with small natural movement, carrot resting on a desk in front, calm professional
+but friendly demeanor, static camera, clean studio-style background in brand
+rose/wine tone (#8B2D4F accent).
+Note: keep the mouth movement minimal (a simple up/down arc) so the thin-line design stays intact.`;
+}
+function renderVideo(){
+  document.getElementById("vid-output").textContent=buildVideoPrompt();
+  document.getElementById("vid-swatches").innerHTML=VID_SWATCHES.map(([n,c])=>`<span class="sw"><i style="background:${c}"></i>${n} ${c}</span>`).join("");
+}
+
+/* ===========================================================
+   TAB 04 — カット割り（絵コンテ）資料13準拠
+   =========================================================== */
+function gatherBoard(){
+  const v=id=>(document.getElementById(id).value||"").trim();
+  return {theme:v("b_theme"),anchor:v("b_anchor")||"しろうさぎアナウンサー",title:v("b_title"),
+    problem:v("b_problem"),think:v("b_think")||"30",tech:v("b_tech"),why:v("b_why"),
+    p1:v("b_p1"),p2:v("b_p2"),p3:v("b_p3"),kaizen:v("b_kaizen"),action:v("b_action"),
+    tk1:v("b_tk1"),tk2:v("b_tk2"),tk3:v("b_tk3")};
+}
+function boardCuts(d){
+  const techNote = d.tech ? `　スライドのサンプル記載欄：「${d.tech}」` : "";
+  const points = `①${d.p1||"ポイント1"}／②${d.p2||"ポイント2"}／③${d.p3||"ポイント3"}`;
+  return [
+    {act:"第1幕 問題提起",num:"1",name:"表紙・タイトルコール",color:"blue",pose:"正面・挨拶",
+     cam:`中央のアナへゆっくりズームイン（110%）。テロップ「${d.title||"（タイトル）"}」を表示。`,sec:"5s",
+     nar:`こんにちは。${d.anchor}です。今日は、学んだ技術をチームに最高にわかりやすく伝える方法をお送りします。`},
+    {act:"第1幕 問題提起",num:"2",name:"問いかけ",color:"blue",pose:"正面・困り顔",
+     cam:"バストアップまで寄せる。背景は青を維持し、親密な構図に。",sec:"7s",
+     nar:`${d.problem||"（あるある失敗の問いかけ）"}`},
+    {act:"第1幕 問題提起",num:"3",name:`思考時間（${d.think}秒）`,color:"blue",pose:"正面・考え中",
+     cam:`右下に${d.think}秒タイマー。静止画を左→右へゆっくりパン、その後戻す。`,sec:`${d.think}s`,
+     nar:`なぜ伝わらなかったのか。${d.think}秒間、原因を思い出してみてください。シンキングタイム、スタートです。`},
+    {act:"第1幕 問題提起",num:"4",name:"核心提示",color:"red",pose:"正面・驚き顔",
+     cam:"画面全体を青→赤基調へ切替。背後の赤いモニターへ0.5秒で急激にズームイン。",sec:"8s",
+     nar:`実は、最大の壁は『やり方』だけで『なぜ必要か』が抜けていることにあるんです！`},
+    {act:"第2幕 解説（Why強調）",num:"5",name:"赤モニターでWhyを売る",color:"red",pose:"指示棒で指す",
+     cam:`アナの視線→指示棒の先（モニター内ポイント1）へ水平にパンし視線誘導。赤モニター表示：「${d.why||"（Whyコピー）"}」／${points}${techNote}`,sec:"—",
+     nar:`こちらの赤いモニターをご覧ください。この3点を順番に話すだけで食いつきが劇的に変わります。やり方（How）を教える前に、まずは理由（Why）を売る。このマインドがエンジニアの心に火をつけます。`},
+    {act:"第3幕 カイゼン提案",num:"6",name:"具体策の提示",color:"blue",pose:"ボードを持つ",
+     cam:"スタジオを青基調へ戻す。ボード内のチェックリスト（3大要素メモ）へグッとズーム。",sec:"—",
+     nar:`${d.kaizen||"（カイゼン提案）"}`},
+    {act:"第4幕 行動喚起",num:"7",name:"問いかけ・アウトプット促し",color:"blue",pose:"正面・笑顔",
+     cam:"明るいライティング。視聴者へ語りかけるミドルショット（腰から上）。",sec:"—",
+     nar:`${d.action||"（行動喚起）"}`},
+    {act:"第5幕 エンディング",num:"8",name:"最後の挨拶",color:"blue",pose:"手を挙げる（笑顔）／番組ロゴ背景",
+     cam:"番組ロゴ・世界地図背景。ラスト3秒でゆっくりホワイトアウト。",sec:"—",
+     nar:`共に学びを深めていきましょう。${d.anchor}がお送りしました。ご視聴いただきまして、ありがとうございました。次回のニュースもお楽しみに！`}
+  ];
+}
+function renderBoard(){
+  const d=gatherBoard(); const out=document.getElementById("board-output");
+  let html=`<div class="title-card"><div class="kicker">完全制作指示書</div>
+    <h3>『${esc(d.theme||"（テーマ）")}』 — しろうさぎニュース カット表</h3>
+    <div class="meta">司会：${esc(d.anchor)}　／　配色：青＝通常・赤＝核心(Why)　／　新規描画禁止・素材切替＋カメラワークのみ</div></div>`;
+  let lastAct="";
+  boardCuts(d).forEach(c=>{
+    if(c.act!==lastAct){html+=`<p style="font-family:var(--font-serif);font-weight:700;color:var(--ink);margin:16px 0 8px;font-size:15px;border-bottom:1px solid var(--line);padding-bottom:4px">${c.act}</p>`;lastAct=c.act;}
+    html+=`<div class="scene"><div class="sc-head"><span class="sc-num">${c.num}</span>
+      <span class="sc-name">${esc(c.name)}</span><span class="sc-chips">
+      <span class="chip ${c.color}">${c.color==="red"?"赤・核心":"青・通常"}</span>
+      <span class="chip img">${esc(c.pose)}</span><span class="chip">${esc(c.sec)}</span></span></div>
+      <div class="sc-body"><p class="narration">${esc(c.nar)}</p><p class="stage">▶ ${esc(c.cam)}</p></div></div>`;
+  });
+  html+=`<div class="scene"><div class="sc-head"><span class="sc-num">📰</span><span class="sc-name">下部テロップ（速報バー・ループ）</span></div>
+    <div class="sc-body" style="font-size:13.5px">
+      <p style="margin:.3em 0">1. ${esc(d.tk1||"（テロップ1）")}</p>
+      <p style="margin:.3em 0">2. ${esc(d.tk2||"（テロップ2）")}</p>
+      <p style="margin:.3em 0">3. ${esc(d.tk3||"（テロップ3）")}</p></div></div>
+    <div class="scene"><div class="sc-head"><span class="sc-num">♪</span><span class="sc-name">BGM構成</span></div>
+    <div class="sc-body" style="font-size:13.5px">
+      <p style="margin:.3em 0">通常時：落ち着いたニュース番組風のアップテンポ。</p>
+      <p style="margin:.3em 0">シンキングタイム：低音強調のアンビエント（没入）。</p>
+      <p style="margin:.3em 0">核心部（第2幕）：発見を感じさせるドラマチックなストリングス。</p></div></div>
+    <div class="note"><b>絶対遵守：</b>イラストの新規描き起こしは禁止。提供ソース画像（ポーズ・表情・背景）の切替とカメラワーク（ズーム/パン）のみで「ダイナミックなニュース映像」を表現します。</div>`;
+  out.innerHTML=html;
+}
+function buildBoardMarkdown(d){
+  const L=[];
+  L.push(`# しろうさぎニュース カット表｜${d.theme||"（テーマ）"}`,``);
+  L.push(`- 司会：${d.anchor}`,`- 配色ルール：青＝通常進行・安心／赤＝核心(Why)の強調`);
+  L.push(`- 絶対遵守：新規描画禁止。ソース画像の切替＋カメラワーク（ズーム/パン）のみ`,``);
+  let lastAct="";
+  boardCuts(d).forEach(c=>{
+    if(c.act!==lastAct){L.push(``,`## ${c.act}`);lastAct=c.act;}
+    L.push(``,`### カット${c.num}：${c.name}　［${c.color==="red"?"赤・核心":"青・通常"}／${c.sec}］`);
+    L.push(`- ポーズ：${c.pose}`,`- カメラ：${c.cam}`,`- ナレーション：${c.nar}`);
+  });
+  L.push(``,`## 付録：下部テロップ（速報バー・ループ）`);
+  [d.tk1,d.tk2,d.tk3].forEach((t,i)=>L.push(`${i+1}. ${t||"（未入力）"}`));
+  L.push(``,`## 付録：BGM構成`);
+  L.push(`- 通常時：落ち着いたニュース番組風アップテンポ`,`- シンキングタイム：低音強調のアンビエント`,`- 核心部（第2幕）：ドラマチックなストリングス`);
+  L.push(``,`---`,`🐰 うさうさ研修工房／カット割りジェネレーター ${VERSION}`);
+  return L.join("\n");
+}
+
+/* ===========================================================
+   TAB 05 — 社内シェア記事 資料14準拠
+   =========================================================== */
+let videos=[], vid2=0;
+function defaultVideo(){return {id:++vid2,title:"",url:"",copy:"",desc:""};}
+function addVideo(){videos.push(defaultVideo());renderVideoRows();renderArticle();}
+function renderVideoRows(){
+  const list=document.getElementById("video-list"); list.innerHTML="";
+  videos.forEach((vrow,i)=>{
+    const row=document.createElement("div"); row.className="metaphor-row";
+    row.innerHTML=`
+      <div class="row-top"><span class="tag why" style="background:#fbeef2;color:var(--rose);border-color:#e7c3cf">動画 ${i+1}</span>
+        <button type="button" class="del-row" title="削除" aria-label="削除">×</button></div>
+      <div class="mini-grid">
+        <input type="text" class="v-title" placeholder="動画タイトル" value="${esc(vrow.title)}">
+        <input type="text" class="v-url" placeholder="URL" value="${esc(vrow.url)}">
+      </div>
+      <input type="text" class="v-copy" placeholder="キャッチコピー（**「〜」**）" value="${esc(vrow.copy)}" style="margin-bottom:8px">
+      <textarea class="v-desc" placeholder="この動画の内容・背景（2〜3文）">${esc(vrow.desc)}</textarea>`;
+    row.querySelector(".del-row").addEventListener("click",()=>{videos=videos.filter(x=>x.id!==vrow.id);renderVideoRows();renderArticle();});
+    row.querySelector(".v-title").addEventListener("input",e=>{vrow.title=e.target.value;renderArticle();});
+    row.querySelector(".v-url").addEventListener("input",e=>{vrow.url=e.target.value;renderArticle();});
+    row.querySelector(".v-copy").addEventListener("input",e=>{vrow.copy=e.target.value;renderArticle();});
+    row.querySelector(".v-desc").addEventListener("input",e=>{vrow.desc=e.target.value;renderArticle();});
+    list.appendChild(row);
+  });
+}
+function gatherArticle(){
+  const v=id=>(document.getElementById(id).value||"").trim();
+  return {title:v("a_title"),reader:v("a_reader"),narrow:v("a_narrow"),scene:v("a_scene"),
+    author:v("a_author"),date:v("a_date"),back:v("a_back"),ref:v("a_ref"),tool:v("a_tool"),
+    pain1:v("a_pain1"),pain2:v("a_pain2"),pain3:v("a_pain3"),toolnote:v("a_toolnote"),
+    quote:v("a_quote"),joke:v("a_joke"),access:v("a_access"),contact:v("a_contact"),
+    extratitle:v("a_extratitle"),extra:v("a_extra"),videos:videos};
+}
+function buildArticleMarkdown(d){
+  const ph=(s,f)=>s||`【${f}】`;
+  const n=d.videos.length||0;
+  const readerLine = d.narrow ? `${ph(d.reader,"対象読者")}（とくに${d.narrow}の方）` : ph(d.reader,"対象読者");
+  const L=[];
+  L.push(`# ${ph(d.title,"記事タイトル")}`,``);
+  L.push(`> **対象：** ${readerLine}  `);
+  L.push(`> **場面：** ${ph(d.scene,"役立つ場面")}  `);
+  L.push(`> **執筆：** ${ph(d.author,"氏名")} ／ ${ph(d.date,"年月")}  `);
+  L.push(`> **読了時間：** 約${readMinutes(d)}分（動画は別途）`,``,`---`,``);
+  L.push(`${ph(d.back,"執筆背景を1〜2文")}`,``);
+  L.push(`その経験と、${ph(d.ref,"参考にしたもの")}をもとに「知っておけばよかったこと」を整理して、**うさうさ先生がやさしく解説する動画**にしました。全${n||"X"}本、電車の中でよかったら観てみてください 🐰`,``,`---`,``);
+  if(d.pain1||d.pain2||d.pain3){
+    [d.pain1,d.pain2,d.pain3].filter(Boolean).forEach(p=>L.push(`「${p}」  `));
+    L.push(``,`……思い当たるふしがある方、大丈夫です。**私もそうでした。**`,``,`---`,``);
+  }
+  L.push(`## 📺 動画ラインナップ（全${n||"X"}本）`,``);
+  L.push(`番号順に観ることをおすすめしますが、気になるところから観てもOKです 🐰`,``,`---`,``);
+  d.videos.forEach((vrow,i)=>{
+    const mark=["①","②","③","④","⑤","⑥"][i]||`(${i+1})`;
+    const url=vrow.url||"【URL】"; const t=vrow.title||`【動画タイトル${i+1}】`;
+    L.push(`### [${mark} ${t}](${url})`,``);
+    if(vrow.copy) L.push(`**「${vrow.copy}」**`,``);
+    if(vrow.desc) L.push(`${vrow.desc}`,``);
+    L.push(`▶ [動画を視聴する](${url})`,``,`---`,``);
+  });
+  L.push(`## 🎙️ ちなみにこの動画、${ph(d.tool,"制作ツール名")}で作りました`,``);
+  if(d.toolnote) L.push(`${d.toolnote}`,``);
+  if(d.quote) L.push(`「${d.quote}」`,``);
+  if(d.joke) L.push(`……${d.joke} 🐇`,``);
+  L.push(`---`,``,`## 📌 視聴リンク一覧`,``);
+  L.push(`> 🔒 ${ph(d.access,"アクセス条件")}  `);
+  if(d.contact) L.push(`> アクセス権限が必要な場合は${d.contact}までご連絡ください。`);
+  L.push(``,`| 動画 | タイトル | リンク |`,`|------|---------|--------|`);
+  d.videos.forEach((vrow,i)=>{const mark=["①","②","③","④","⑤","⑥"][i]||`(${i+1})`;L.push(`| ${mark} | ${vrow.title||"（未入力）"} | [▶ 視聴する](${vrow.url||"【URL】"}) |`);});
+  L.push(``,`---`,``);
+  if(d.extratitle||d.extra){
+    L.push(`## ✏️ おまけ：${ph(d.extratitle,"読者層へのメッセージ")}`,``);
+    if(d.extra) L.push(`${d.extra}`,``);
+    L.push(`---`,``);
+  }
+  L.push(`気軽に試してみてください 🐰`);
+  return L.join("\n");
+}
+function readMinutes(d){
+  const md=buildArticleBody(d);
+  const chars=md.replace(/\s/g,"").length;
+  return Math.max(1,Math.round(chars/500));
+}
+/* 読了時間は本文文字数から（読了時間行自体を除くため別関数で本文だけ概算） */
+function buildArticleBody(d){
+  return [d.title,d.back,d.ref,d.pain1,d.pain2,d.pain3,d.toolnote,d.quote,d.joke,d.access,d.extra,
+    ...d.videos.map(v=>`${v.title}${v.copy}${v.desc}`)].filter(Boolean).join("");
+}
+function articleChecklist(d){
+  const has3=v=>v; const urls=d.videos.length&&d.videos.every(v=>v.url);
+  return [
+    [!!(d.author&&d.date),"メタ情報に 執筆者名・年月・読了時間 が入っているか"],
+    [!!d.back,"リード文に 失敗談／執筆背景 が入っているか"],
+    [urls,"動画URLが 見出し・本文末・テーブル の3か所に入っているか"],
+    [d.videos.length>0&&d.videos.every(v=>v.copy),"各動画に キャッチコピー（**「〜」**）があるか"],
+    [!!d.access,"アクセス権限の説明（Drive/ポータルのURL）が明記されているか"],
+    [true,"締めが「気軽に試してみてください 🐰」になっているか（自動挿入済み）"],
+    [true,"保存ファイル名は英数字のみか（文字化け防止）"]
+  ];
+}
+function renderArticle(){
+  const d=gatherArticle();
+  document.getElementById("article-output").textContent=buildArticleMarkdown(d);
+  document.getElementById("a-readtime").textContent=`読了 約${readMinutes(d)}分`;
+  document.getElementById("article-checklist").innerHTML=
+    articleChecklist(d).map(([ok,t])=>`<label><input type="checkbox" ${ok?"checked":""}>${esc(t)}</label>`).join("");
+}
+
+
+/* ===========================================================
+   TAB 06 — 画像解析（実測カラー抽出＋言語化）
+   =========================================================== */
+function rgbToHsv(r,g,b){
+  r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),dl=mx-mn;
+  let h=0; if(dl){ if(mx===r)h=((g-b)/dl)%6; else if(mx===g)h=(b-r)/dl+2; else h=(r-g)/dl+4; h*=60; if(h<0)h+=360; }
+  const s=mx===0?0:dl/mx; return [Math.round(h),Math.round(s*100),Math.round(mx*100)];
+}
+function toHex(r,g,b){return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();}
+function quantize(pixels,k){
+  const buckets={};
+  for(let i=0;i<pixels.length;i+=4){
+    const a=pixels[i+3]; if(a<125) continue;
+    const r=pixels[i],g=pixels[i+1],b=pixels[i+2];
+    const key=(r>>5)+"-"+(g>>5)+"-"+(b>>5);
+    (buckets[key]=buckets[key]||{n:0,r:0,g:0,b:0});
+    const o=buckets[key]; o.n++;o.r+=r;o.g+=g;o.b+=b;
+  }
+  const arr=Object.values(buckets).sort((a,b)=>b.n-a.n);
+  const total=arr.reduce((s,o)=>s+o.n,0)||1;
+  return arr.slice(0,k).map(o=>{
+    const r=Math.round(o.r/o.n),g=Math.round(o.g/o.n),b=Math.round(o.b/o.n);
+    return {r,g,b,hex:toHex(r,g,b),hsv:rgbToHsv(r,g,b),ratio:Math.round(o.n/total*1000)/10};
+  });
+}
+function analyzeImage(file){
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    const W=72,H=Math.max(1,Math.round(72*img.height/img.width));
+    const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+    const ctx=cv.getContext("2d"); ctx.drawImage(img,0,0,W,H);
+    let data; try{ data=ctx.getImageData(0,0,W,H).data; }catch(e){ toast("この画像は解析できませんでした"); return; }
+    const k=parseInt(STATE.an.k,10)||6;
+    window.__lastAnalysis={palette:quantize(data,k)};
+    URL.revokeObjectURL(url);
+    renderAnalyze();
+  };
+  img.onerror=()=>toast("画像を読み込めませんでした");
+  img.src=url;
+  const pw=document.getElementById("an-preview-wrap"); pw.style.display="";
+  document.getElementById("an-preview").src=url;
+}
+function moodWords(p){
+  const warm=p.filter(c=>c.hsv[0]<60||c.hsv[0]>300).reduce((s,c)=>s+c.ratio,0);
+  const cool=p.filter(c=>c.hsv[0]>=150&&c.hsv[0]<=270).reduce((s,c)=>s+c.ratio,0);
+  const sumR=p.reduce((s,c)=>s+c.ratio,0)||1;
+  const avgS=Math.round(p.reduce((s,c)=>s+c.hsv[1]*c.ratio,0)/sumR);
+  const avgV=Math.round(p.reduce((s,c)=>s+c.hsv[2]*c.ratio,0)/sumR);
+  const temp = warm>cool+8?"暖色寄り":cool>warm+8?"寒色寄り":"暖寒バランス型";
+  const sat = avgS<25?"低彩度（やわらか・落ち着き）":avgS<55?"中彩度（自然な親しみ）":"高彩度（元気・主張）";
+  const bri = avgV<40?"低明度（重厚・大人っぽい）":avgV<70?"中明度（安定感）":"高明度（明るい・清潔感）";
+  return {temp,sat,bri,avgS,avgV,warm:Math.round(warm),cool:Math.round(cool)};
+}
+function renderAnalyze(){
+  const a=window.__lastAnalysis; if(!a) return;
+  const p=a.palette, name=(document.getElementById("an-name").value||"このキャラ").trim();
+  const m=moodWords(p);
+  document.getElementById("an-swatches").innerHTML=p.map(c=>`<span class="sw"><i style="background:${c.hex}"></i>${c.hex} ${c.ratio}%</span>`).join("");
+  let html=`<div class="title-card"><div class="kicker">画像解析レポート</div><h3>${esc(name)} の配色言語化</h3>
+    <div class="meta">抽出 ${p.length}色 ／ 暖色 ${m.warm}%・寒色 ${m.cool}% ／ 平均S ${m.avgS}・平均V ${m.avgV}（実測値）</div></div>`;
+  if(STATE.an.level==="suchi"){
+    html+=`<div class="scene"><div class="sc-head"><span class="sc-num">#</span><span class="sc-name">数値分析（HEX / RGB / HSV / 占有率）</span></div>
+      <div class="sc-body" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <tr style="color:var(--muted)"><th style="text-align:left;padding:4px">色</th><th style="text-align:left">HEX</th><th style="text-align:left">RGB</th><th style="text-align:left">HSV</th><th style="text-align:left">比率</th></tr>
+      ${p.map(c=>`<tr style="border-top:1px solid var(--line)"><td style="padding:5px"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${c.hex};border:1px solid #0001;vertical-align:middle"></span></td>
+      <td>${c.hex}</td><td>${c.r},${c.g},${c.b}</td><td>${c.hsv[0]}°,${c.hsv[1]}%,${c.hsv[2]}%</td><td>${c.ratio}%</td></tr>`).join("")}
+      </table></div></div>
+      <div class="scene"><div class="sc-head"><span class="sc-num">Σ</span><span class="sc-name">クラスタ所見</span></div>
+      <div class="sc-body" style="font-size:13.5px">
+      <p style="margin:.3em 0">温度傾向：${m.temp}（暖${m.warm}% / 寒${m.cool}%）</p>
+      <p style="margin:.3em 0">彩度：${m.sat}／明度：${m.bri}</p>
+      <p style="margin:.3em 0">最頻色 ${p[0].hex}（${p[0].ratio}%）を地色、占有率の低い高彩度色をアクセントに割り当てると設計の再現性が上がります。</p></div></div>`;
+  }else{
+    html+=`<div class="scene"><div class="sc-head"><span class="sc-num">🎨</span><span class="sc-name">やさしい言葉での説明</span></div>
+      <div class="sc-body" style="font-size:14px;line-height:1.85">
+      <p style="margin:.4em 0">全体は <b>${m.temp}</b> の印象です。いちばん広く使われているのは <b>${p[0].hex}</b>（約${p[0].ratio}%）で、この色が画面全体の“地”の空気を作っています。</p>
+      <p style="margin:.4em 0">色のあざやかさは <b>${m.sat}</b>、明るさは <b>${m.bri}</b>。やわらかく見せたい時はこの低めの彩度が効いていて、ところどころの濃い色が“目を引くポイント”になっています。</p>
+      <p style="margin:.4em 0">つまりこのキャラは、「${m.temp==="暖色寄り"?"あたたかくて親しみやすい":m.temp==="寒色寄り"?"落ち着いて知的な":"バランスのとれた"}」見た目に整えられている、と言えます 🐰</p></div></div>`;
+  }
+  html+=`<div class="note"><b>嘘つかない原則：</b>HEX/RGB/HSV・占有率はこの画像から実際に測った値です。印象語は測定したトーンから機械的に導いたもので、根拠のない断定はしていません。</div>`;
+  document.getElementById("an-output").innerHTML=html;
+}
+function analyzeMarkdown(){
+  const a=window.__lastAnalysis; if(!a) return "（画像が未選択です）";
+  const p=a.palette,m=moodWords(p),name=(document.getElementById("an-name").value||"このキャラ").trim();
+  const L=[`# 画像解析レポート：${name}`,``,`- 抽出色数：${p.length}`,`- 温度傾向：${m.temp}（暖${m.warm}% / 寒${m.cool}%）`,`- 平均彩度S：${m.avgS}／平均明度V：${m.avgV}`,``,`## パレット（実測）`,``,`| 色 | HEX | RGB | HSV | 占有率 |`,`|---|---|---|---|---|`];
+  p.forEach(c=>L.push(`| ■ | ${c.hex} | ${c.r},${c.g},${c.b} | ${c.hsv[0]}°,${c.hsv[1]}%,${c.hsv[2]}% | ${c.ratio}% |`));
+  L.push(``,`## 所見`,`- ${m.sat}／${m.bri}`,`- 地色：${p[0].hex}（${p[0].ratio}%）／アクセント：占有率の低い高彩度色`,``,`---`,`🐰 うさうさ研修工房／画像解析 ${VERSION}　※実測値のみ・捏造なし`);
+  return L.join("\n");
+}
+function analyzeToVideoPrompt(){
+  const a=window.__lastAnalysis; if(!a){toast("先に画像を解析してください");return;}
+  const p=a.palette,name=(document.getElementById("an-name").value||"original character").trim();
+  const cols=p.map((c,i)=>`${i===0?"main body":i===1?"secondary":"accent"} ${c.hex}`).join(", ");
+  const prompt=`A cute flat 2D anime mascot named "${name}", kawaii vector illustration.
+Use this exact measured palette: ${cols}.
+Soft thin outline, large round eyes with an upper-right highlight, gentle blush,
+fluffy rounded silhouette, plain light background, no 3D, no realistic textures.
+[idle loop] gentle blink every 3s, slight breathing motion, seamless loop, calm mood.`;
+  document.getElementById("vid-output").textContent=prompt+vstyleLine();
+  document.getElementById("vid-swatches").innerHTML=p.map(c=>`<span class="sw"><i style="background:${c.hex}"></i>${c.hex}</span>`).join("");
+  showTab("video"); toast("この配色でアニメ化プロンプトを作りました 🐰");
+}
+
+/* ===========================================================
+   TAB 07 — AI壁打ち（APIキーはメモリのみ）
+   =========================================================== */
+let aiHistory=[];
+function projectContextText(){
+  const d=gather(),b=gatherBoard();
+  return `【現在の制作メモ】テーマ:${b.theme||d.skill||"-"} / 核心:${b.why||d.core||"-"} / 行動喚起:${b.action||d.action||"-"}`;
+}
+function renderChat(){
+  const log=document.getElementById("ai-log");
+  if(aiHistory.length===0){ log.innerHTML=`<p style="color:var(--muted)">キーを入れて質問すると、ここに会話が表示されます。例：「フックの掴みを3案」🐰</p>`; return; }
+  log.innerHTML=aiHistory.map(msg=>{
+    const me=msg.role==="user";
+    return `<div style="margin:0 0 12px;display:flex;${me?"justify-content:flex-end":""}">
+      <div style="max-width:85%;padding:10px 13px;border-radius:12px;font-size:14px;line-height:1.7;white-space:pre-wrap;
+      ${me?"background:var(--rose);color:#fff":"background:var(--paper);border:1px solid var(--line);color:var(--text)"}">${esc(msg.content)}</div></div>`;
+  }).join("");
+  log.scrollTop=log.scrollHeight;
+}
+async function sendChat(){
+  const key=document.getElementById("ai-key").value.trim();
+  const input=document.getElementById("ai-input");
+  const text=input.value.trim();
+  if(!text) return;
+  if(!key){ toast("APIキーを入力してください"); return; }
+  aiHistory.push({role:"user",content:text}); input.value=""; renderChat();
+  const sendBtn=document.getElementById("ai-send"); sendBtn.disabled=true; sendBtn.textContent="…";
+  let sys=document.getElementById("ai-system").value.trim();
+  if(STATE.ai.ctx==="on") sys+="\n"+projectContextText();
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":key,
+        "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:document.getElementById("ai-model").value,max_tokens:1024,system:sys,
+        messages:aiHistory.map(m=>({role:m.role,content:m.content}))})
+    });
+    const data=await res.json();
+    if(!res.ok){ aiHistory.push({role:"assistant",content:"⚠ エラー："+((data.error&&data.error.message)||res.status)}); }
+    else { const t=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim(); aiHistory.push({role:"assistant",content:t||"(空の応答)"}); }
+  }catch(e){ aiHistory.push({role:"assistant",content:"⚠ 通信に失敗しました（CORS/キー/ネットワークをご確認ください）："+e.message}); }
+  sendBtn.disabled=false; sendBtn.textContent="送信"; renderChat();
+}
+
+/* ===========================================================
+   TAB 08 — ディレクション設計書一式
+   =========================================================== */
+function gatherDoc(){
+  const v=id=>(document.getElementById(id).value||"").trim();
+  return {project:v("d_project"),client:v("d_client"),director:v("d_director"),due:v("d_due"),
+    goal:v("d_goal"),target:v("d_target"),count:v("d_count")||"1",
+    features:v("d_features").split("\n").map(s=>s.trim()).filter(Boolean),constraint:v("d_constraint")};
+}
+const WBS=[
+  ["1","企画","要件定義・成功基準の合意","監督","2"],
+  ["2","台本","構成・ナレーション・比喩設計","監督","2"],
+  ["3","素材","ソース画像の選定・色味基準の確定","制作","1"],
+  ["4","制作","カメラワーク・配色切替・PiP配置","制作","3"],
+  ["5","レビュー","クライアント確認・修正反映","監督/クライアント","2"],
+  ["6","納品","書き出し・形式確認・受入チェック","監督","1"]
+];
+function docReq(d){
+  return [
+`# 要件定義書｜${d.project||"（案件名）"}`,``,
+`- クライアント：${d.client||"—"}　／　監督：${d.director||"—"}　／　納期：${d.due||"—"}`,``,
+`## 1. 背景・目的`,d.goal||"（目的）",``,
+`## 2. ターゲット`,`${d.target||"—"}（動画 ${d.count} 本）`,``,
+`## 3. スコープ`,...(d.features.length?d.features.map(f=>`- ${f}`):["- （主要シーンを入力）"]),``,
+`## 4. 機能要件`,`- 5幕構成（問題提起→Why→How→行動喚起→締め）`,`- 配色ルール（青=通常／赤=核心Why）`,`- 小窓(PiP)固定・カメラワーク（ズーム/パン）`,``,
+`## 5. 非機能要件`,`- 新規描画禁止（ソース画像＋カメラワークのみ）`,`- 発音指定（PoC→ピーオーシー 等）`,`- ブランド一貫性（決めゼリフ固定）`,``,
+`## 6. 制約・絶対遵守`,d.constraint||"—",``,
+`## 7. 受入基準`,`- 配色切替がスクリプトと一致`,`- 決めゼリフ完全一致`,`- 指定発音の遵守`,`- 嘘つかない原則（出典・数値の捏造なし）`
+  ].join("\n");
+}
+function docDesign(d){
+  return [
+`# 詳細設計書｜${d.project||"（案件名）"}`,``,
+`## 1. 全体構成`,`5幕構成。各幕に［配色／ポーズ／カメラワーク／ナレーション］を割り当てる。`,``,
+`## 2. シーン設計`,...(d.features.length?d.features.map((f,i)=>`- シーン${i+1}：${f}（1シーン1概念）`):["- （シーンを入力）"]),``,
+`## 3. 配色設計`,`- 青 #657DAC：導入・カイゼン・挨拶（安心）`,`- 赤 #D54E4B：問題提起・Why（核心）`,``,
+`## 4. 素材一覧（新規描画なし）`,`- 正面/横/後ろ/手を上げる/困り顔/驚き顔/指示棒/ボード持ち`,`- 小窓(PiP)用：手を振る・片手にマイク`,``,
+`## 5. カメラワーク方針`,`- 視線誘導：キャラ視線→核心へ水平パン`,`- 強調：重要箇所へ急ズーム`,``,
+`## 6. 命名規則`,`- ファイル名は英数字（文字化け防止）`,`- バージョンスタンプを明記`
+  ].join("\n");
+}
+function docImpl(d){
+  return [
+`# 実装仕様書｜${d.project||"（案件名）"}`,``,
+`## 1. 制作手順`,`1. 台本確定 → 2. 素材選定 → 3. タイムライン配置 → 4. カメラワーク付与 → 5. 配色切替 → 6. 書き出し`,``,
+`## 2. 使用ツール`,`- 動画生成/編集ツール（image-to-video）`,`- うさうさ プロンプトスタジオ（台本・プロンプト・設計書）`,``,
+`## 3. ファイル構成`,"```",`/project/${(d.project||"project").replace(/\s/g,"_")}/`,`  ├─ script.md`,`  ├─ storyboard.md`,`  ├─ assets/`,`  └─ exports/`,"```",``,
+`## 4. テスト項目`,`- [ ] 配色切替タイミングが台本と一致`,`- [ ] PiP固定が解説以降で維持`,`- [ ] 発音指定の遵守`,`- [ ] 決めゼリフ完全一致`,`- [ ] テロップ誤字なし`,``,
+`## 5. 納品形式`,`- 動画本体（指定解像度）／カット表(MD)／WBS(CSV)`
+  ].join("\n");
+}
+function docWbsMd(d){
+  const L=[`# WBS｜${d.project||"（案件名）"}`,``,`| # | フェーズ | タスク | 担当 | 工数(人日) | 状態 |`,`|---|---|---|---|---|---|`];
+  WBS.forEach(r=>L.push(`| ${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} | ${r[4]} | 未着手 |`));
+  const total=WBS.reduce((s,r)=>s+Number(r[4]),0);
+  L.push(``,`合計工数：${total} 人日`); return L.join("\n");
+}
+function docWbsCsv(){
+  const rows=[["#","フェーズ","タスク","担当","工数(人日)","状態"],...WBS.map(r=>[...r,"未着手"])];
+  return "\ufeff"+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+}
+function docClient(d){
+  const proj=d.project||"本件",cl=d.client||"ご担当者",dir=d.director||"うさうさ研修工房";
+  const block=(label,body)=>`■ ${label}\n${body}\n`;
+  return [
+block("① 作成・打ち合わせ確認",
+`${cl}様\nお世話になっております。${dir}です。\n「${proj}」の制作を開始いたしました。目的・ターゲット・成功基準を以下で合意済みとして進めます。認識齟齬があればご指摘ください。\n・目的：${d.goal||"（目的）"}\n・納期：${d.due||"（調整中）"}\nどうぞよろしくお願いいたします。`),
+block("② レビュー依頼",
+`${cl}様\n「${proj}」の初稿が完成いたしました。ご確認をお願いいたします。\n特に「配色（青=通常／赤=核心）」と「核心メッセージの伝わり方」を重点的に見ていただけますと幸いです。修正は1回の往復にまとめていただけると助かります。`),
+block("③ 納品連絡",
+`${cl}様\n「${proj}」が完成いたしましたので納品いたします。\n受入基準（決めゼリフ・発音指定・配色一致）はすべて確認済みです。形式や追加のご要望がありましたらお知らせください。`),
+block("④ お礼",
+`${cl}様\nこのたびは「${proj}」をお任せいただき、誠にありがとうございました。\nまた次の企画でもご一緒できれば嬉しいです。引き続きどうぞよろしくお願いいたします。`),
+block("⑤ 監督応援（自分・チーム向け）",
+`お疲れさまです🐰 「${proj}」、ここまで丁寧に積み上げてきました。\n厳しい品質ゲートは自分を守る仕組みです。証拠（テスト）で語り、最後までやさしく、誇りを持って締めましょう。あと一息、いきましょう！`)
+  ].join("\n");
+}
+function currentDoc(d){
+  const v=STATE.doc.view;
+  return v==="req"?docReq(d):v==="design"?docDesign(d):v==="impl"?docImpl(d):v==="wbs"?docWbsMd(d):docClient(d);
+}
+function docAllMarkdown(d){
+  return [docReq(d),"\n\n---\n\n",docDesign(d),"\n\n---\n\n",docImpl(d),"\n\n---\n\n",docWbsMd(d),"\n\n---\n\n# クライアント文面セット\n\n",docClient(d)].join("");
+}
+function renderDoc(){
+  const d=gatherDoc(); const v=STATE.doc.view;
+  const out=document.getElementById("doc-output");
+  if(v==="wbs"){
+    const total=WBS.reduce((s,r)=>s+Number(r[4]),0);
+    out.innerHTML=`<div class="title-card"><div class="kicker">WBS</div><h3>${esc(d.project||"（案件名）")}</h3>
+      <div class="meta">合計工数 ${total} 人日</div></div>
+      <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr style="color:var(--muted)"><th style="text-align:left;padding:6px">#</th><th style="text-align:left">フェーズ</th><th style="text-align:left">タスク</th><th style="text-align:left">担当</th><th style="text-align:left">工数</th></tr>
+      ${WBS.map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:6px">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}人日</td></tr>`).join("")}
+      </table></div>`;
+  }else{
+    out.innerHTML=`<pre class="prompt-pre" style="background:transparent">${esc(currentDoc(d))}</pre>`;
+  }
+}
+
+/* ===========================================================
+   🐞 テントウムシ：バグ・気づきメモ
+   =========================================================== */
+let bugs=[];
+function renderBugs(){
+  const list=document.getElementById("bug-list");
+  list.innerHTML=bugs.length?bugs.map((b,i)=>`<div class="bug-item">
+    <div class="bm"><span class="sev ${b.sev}">${b.sev}</span><span class="when">${new Date(b.t).toLocaleString("ja-JP")}</span>
+    <button class="bx" data-i="${i}" title="削除">×</button></div><div>${esc(b.text)}</div></div>`).join(""):`<p style="color:var(--muted);font-size:12.5px">まだ記録はありません。気づきはここに溜めて、保存JSONに同梱されます。</p>`;
+  list.querySelectorAll(".bx").forEach(x=>x.addEventListener("click",()=>{bugs.splice(+x.dataset.i,1);renderBugs();}));
+  updateBugCount();
+}
+function updateBugCount(){const c=document.getElementById("bug-count");c.style.display=bugs.length?"grid":"none";c.textContent=bugs.length;}
+function bugCsv(){
+  const rows=[["日時","区分","内容"],...bugs.map(b=>[new Date(b.t).toLocaleString("ja-JP"),b.sev,b.text])];
+  return "\ufeff"+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+}
+
+/* ===========================================================
+   TAB 09 — キャラ登録プリセット
+   =========================================================== */
+let presets=[], activeP=0, pid=0;
+function defPreset(name,role,style,voice,closing,ng,palette){return {id:++pid,name,role,style,voice,closing,ng,palette};}
+function seedPresets(){
+  presets=[
+    defPreset("しろうさぎアナウンサー","報道アナウンサー","フラット2Dアニメ（カワイイ系）","落ち着いた女性・です/ます調",
+      "面白きこともなき世を面白く。またお会いしましょう。","3D・写実・スーツ色変更・蝶ネクタイ以外・にんじん省略",
+      [{role:"体毛",hex:"#FDF5EE"},{role:"アウトライン",hex:"#2D2A24"},{role:"スーツ",hex:"#334469"},{role:"蝶ネクタイ",hex:"#AF3533"},{role:"ボタン",hex:"#E8AD44"},{role:"頬",hex:"#FFC7CF"},{role:"にんじん",hex:"#F78430"}]),
+    defPreset("うさうさ ちびマスコット","教育マスコット","フラットベクター（chibi）","やわらかい・親しみ",
+      "面白きこともなき世を面白く。","黒い太線・毛質省略の完全フラット・3D",
+      [{role:"ボディ",hex:"#FBF6F0"},{role:"輪郭",hex:"#D9C8BC"},{role:"頬/耳内",hex:"#F2B8C6"},{role:"鼻口",hex:"#E8909E"},{role:"目",hex:"#1E1A1A"},{role:"にんじん",hex:"#E8872A"},{role:"葉",hex:"#5C9E3A"}])
+  ];
+  activeP=0;
+}
+function curPreset(){return presets[activeP];}
+function renderPresetChips(){
+  const box=document.getElementById("preset-chips");
+  box.innerHTML=presets.map((p,i)=>`<span class="preset-chip ${i===activeP?"active":""}" data-i="${i}">
+    <span class="dotc" style="background:${(p.palette[0]&&p.palette[0].hex)||"#ccc"}"></span>${esc(p.name||"無名")}</span>`).join("");
+  box.querySelectorAll(".preset-chip").forEach(c=>c.addEventListener("click",()=>{saveEditingToPreset();activeP=+c.dataset.i;loadPresetToEditor();}));
+}
+function loadPresetToEditor(){
+  const p=curPreset(); if(!p) return;
+  document.getElementById("ps-name").value=p.name||"";
+  document.getElementById("ps-role").value=p.role||"";
+  document.getElementById("ps-style").value=p.style||"";
+  document.getElementById("ps-voice").value=p.voice||"";
+  document.getElementById("ps-closing").value=p.closing||"";
+  document.getElementById("ps-ng").value=p.ng||"";
+  renderPalette(); renderPresetChips(); renderPresetOut();
+}
+function saveEditingToPreset(){
+  const p=curPreset(); if(!p) return;
+  p.name=document.getElementById("ps-name").value;
+  p.role=document.getElementById("ps-role").value;
+  p.style=document.getElementById("ps-style").value;
+  p.voice=document.getElementById("ps-voice").value;
+  p.closing=document.getElementById("ps-closing").value;
+  p.ng=document.getElementById("ps-ng").value;
+}
+function renderPalette(){
+  const p=curPreset(); const list=document.getElementById("pal-list"); list.innerHTML="";
+  p.palette.forEach((c,idx)=>{
+    const row=document.createElement("div"); row.className="pal-row";
+    row.innerHTML=`<input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(c.hex)?c.hex:"#cccccc"}">
+      <input type="text" class="pal-role" placeholder="役割（例：体毛）" value="${esc(c.role)}">
+      <input type="text" class="pal-hex" value="${esc(c.hex)}">
+      <button class="pal-del" title="削除" type="button">×</button>`;
+    const color=row.querySelector('input[type=color]'),role=row.querySelector('.pal-role'),hex=row.querySelector('.pal-hex'),del=row.querySelector('.pal-del');
+    color.addEventListener("input",e=>{c.hex=e.target.value.toUpperCase();hex.value=c.hex;renderPresetOut();renderPresetChips();});
+    role.addEventListener("input",e=>{c.role=e.target.value;renderPresetOut();});
+    hex.addEventListener("input",e=>{c.hex=e.target.value;if(/^#[0-9a-fA-F]{6}$/.test(c.hex))color.value=c.hex;renderPresetOut();renderPresetChips();});
+    del.addEventListener("click",()=>{p.palette.splice(idx,1);renderPalette();renderPresetOut();renderPresetChips();});
+    list.appendChild(row);
+  });
+}
+function presetBibleText(p){
+  return [
+    `# キャラクター設計書：${p.name||"（無名）"}`,``,
+    `- 役割：${p.role||"—"}`,`- アートスタイル：${p.style||"—"}`,`- 音声・口調：${p.voice||"—"}`,`- 決めゼリフ：${p.closing||"—"}`,``,
+    `## カラーパレット`,`| パーツ | HEX |`,`|---|---|`,
+    ...p.palette.map(c=>`| ${c.role||"—"} | ${c.hex} |`),``,
+    `## 禁止事項（NG）`,p.ng||"—",``,
+    `## 画像生成プロンプト（要約）`,
+    `A character "${p.name||"original character"}", ${p.style||"flat 2D anime"}. Exact palette: ${p.palette.map(c=>c.hex).join(", ")}. Role: ${p.role||"-"}. Avoid: ${p.ng||"3D, photorealism"}.`
+  ].join("\n");
+}
+function renderPresetOut(){
+  saveEditingToPreset();
+  const p=curPreset(); if(!p) return;
+  document.getElementById("ps-swatches").innerHTML=p.palette.map(c=>`<span class="sw"><i style="background:${c.hex}"></i>${esc(c.role)} ${c.hex}</span>`).join("");
+  document.getElementById("preset-output").innerHTML=
+    `<div class="title-card"><div class="kicker">キャラクター設計書</div><h3>${esc(p.name||"（無名）")}</h3>
+     <div class="meta">${esc(p.role||"—")}　／　${esc(p.style||"—")}　／　${p.palette.length}色</div></div>
+     <pre class="prompt-pre" style="background:transparent">${esc(presetBibleText(p))}</pre>`;
+}
+function presetToVideo(){
+  const p=curPreset(); if(!p||!p.palette.length){toast("先に色を登録してください");return;}
+  const cols=p.palette.map(c=>`${c.role||"color"} ${c.hex}`).join(", ");
+  const prompt=`A cute ${p.style||"flat 2D anime"} character named "${p.name||"original character"}" (${p.role||"mascot"}).
+Use this exact palette: ${cols}.
+Large round eyes with an upper-right highlight, gentle blush, soft rounded silhouette, plain light background.
+Avoid: ${p.ng||"3D rendering, realistic textures"}.
+[idle loop] gentle blink every 3s, slight breathing motion, seamless loop, calm mood.`;
+  document.getElementById("vid-output").textContent=prompt+vstyleLine();
+  document.getElementById("vid-swatches").innerHTML=p.palette.map(c=>`<span class="sw"><i style="background:${c.hex}"></i>${c.hex}</span>`).join("");
+  showTab("video"); toast("この配色で動画プロンプトを作りました 🐰");
+}
+
+/* ===========================================================
+   クリック音（鈴トグル）＋ 使い方オーバーレイ
+   =========================================================== */
+let audioCtx=null, soundOn=false;
+function playClick(){
+  if(!soundOn) return;
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const t=audioCtx.currentTime;
+    [880,1320].forEach((f,i)=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type="sine";o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t);
+      g.gain.exponentialRampToValueAtTime(i?.05:.11,t+.005);
+      g.gain.exponentialRampToValueAtTime(.0001,t+.18);
+      o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+.2);
+    });
+  }catch(e){}
+}
+
+
+function collectProject(){
+  saveEditingToPreset();
+  const fields={};
+  document.querySelectorAll("input[id],textarea[id],select[id]").forEach(el=>{
+    if(el.type==="file"||el.type==="password") return;
+    fields[el.id]=el.value;
+  });
+  return {app:"usausa-prompt-studio",version:VERSION,savedAt:new Date().toISOString(),
+    fields,seg:JSON.parse(JSON.stringify(STATE)),metaphors,videos,bugs,presets,activeP};
+}
+function syncSegUI(){
+  document.querySelectorAll(".seg-group").forEach(g=>{
+    const t=g.dataset.target,k=g.dataset.key,val=STATE[t]&&STATE[t][k];
+    g.querySelectorAll(".opt").forEach(o=>o.classList.toggle("on",o.dataset.val===val));
+  });
+  applyVisibility();
+}
+function applyProject(p){
+  if(!p||!p.fields){toast("対応していないファイルです");return;}
+  Object.entries(p.fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&el.type!=="file"&&el.type!=="password")el.value=val;});
+  if(p.seg){Object.keys(STATE).forEach(t=>{if(p.seg[t])Object.assign(STATE[t],p.seg[t]);});}
+  if(Array.isArray(p.metaphors)){metaphors=p.metaphors.map(m=>({...m}));mid=Math.max(0,...metaphors.map(m=>m.id||0),0);}
+  if(Array.isArray(p.videos)){videos=p.videos.map(v=>({...v}));vid2=Math.max(0,...videos.map(v=>v.id||0),0);}
+  if(Array.isArray(p.bugs)){bugs=p.bugs.map(b=>({...b}));}
+  if(Array.isArray(p.presets)&&p.presets.length){presets=p.presets.map(x=>({...x,palette:(x.palette||[]).map(c=>({...c}))}));pid=Math.max(0,...presets.map(x=>x.id||0),0);activeP=Math.min(p.activeP||0,presets.length-1);}
+  syncSegUI();
+  renderMetaphors();render();renderImage();renderVideo();renderBoard();renderVideoRows();renderArticle();renderDoc();renderBugs();renderRequest();
+  loadPresetToEditor();
+  if(window.__lastAnalysis)renderAnalyze();
+  toast("復元しました 🐰");
+}
+
+let toastTimer;
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),1800);}
+function copyText(text){
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>toast("コピーしました 🐰")).catch(()=>fallbackCopy(text));}
+  else fallbackCopy(text);
+}
+function fallbackCopy(text){
+  const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand("copy");toast("コピーしました 🐰");}catch(e){toast("コピーに失敗しました");}
+  document.body.removeChild(ta);
+}
+function download(filename,text){
+  const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);toast("保存しました 🐰");
+}
+function slug(s,fallback){return (s||fallback).replace(/[\\/:*?"<>|\s]+/g,"_").slice(0,30);}
+
+/* ---- イベント：台本 ---- */
+document.getElementById("add-metaphor").addEventListener("click",()=>{const next=metaphors.length<=1?"why":"how";addMetaphor(next);});
+document.getElementById("copy-script").addEventListener("click",()=>copyText(buildScriptMarkdown(gather())));
+document.getElementById("copy-template").addEventListener("click",()=>copyText(buildScriptTemplate(gather())));
+document.getElementById("dl-md").addEventListener("click",()=>{const d=gather();download(`しろうさぎニュース_${slug(d.skill,"台本")}.md`,buildScriptMarkdown(d));});
+document.getElementById("print").addEventListener("click",()=>window.print());
+["g_program","g_anchor","g_core","g_voice","g_closing","g_pron","e_skill","e_sub","e_problem","e_conclusion","e_action"]
+  .forEach(idv=>document.getElementById(idv).addEventListener("input",render));
+
+/* ---- イベント：画像 ---- */
+document.getElementById("img-copy").addEventListener("click",()=>copyText(buildImagePrompt()));
+document.getElementById("img-dl").addEventListener("click",()=>download(`しろうさぎ画像_${STATE.img.kind}_${STATE.img.pose}.txt`,buildImagePrompt()));
+
+/* ---- イベント：動画 ---- */
+document.getElementById("vid-copy").addEventListener("click",()=>copyText(buildVideoPrompt()));
+document.getElementById("vid-dl").addEventListener("click",()=>download(`うさうさ動画_${STATE.vid.mode}.txt`,buildVideoPrompt()));
+
+/* ---- イベント：04 カット表 ---- */
+["b_theme","b_anchor","b_title","b_problem","b_think","b_tech","b_why","b_p1","b_p2","b_p3","b_kaizen","b_action","b_tk1","b_tk2","b_tk3"]
+  .forEach(idv=>document.getElementById(idv).addEventListener("input",renderBoard));
+document.getElementById("b-copy").addEventListener("click",()=>copyText(buildBoardMarkdown(gatherBoard())));
+document.getElementById("b-dl").addEventListener("click",()=>download(`storyboard_${slug(gatherBoard().theme,"board")}.md`,buildBoardMarkdown(gatherBoard())));
+document.getElementById("b-print").addEventListener("click",()=>{showTab("board");window.print();});
+
+/* ---- イベント：05 記事 ---- */
+document.getElementById("add-video").addEventListener("click",addVideo);
+["a_title","a_reader","a_narrow","a_scene","a_author","a_date","a_back","a_ref","a_tool","a_pain1","a_pain2","a_pain3","a_toolnote","a_quote","a_joke","a_access","a_contact","a_extratitle","a_extra"]
+  .forEach(idv=>document.getElementById(idv).addEventListener("input",renderArticle));
+document.getElementById("a-copy").addEventListener("click",()=>copyText(buildArticleMarkdown(gatherArticle())));
+document.getElementById("a-dl").addEventListener("click",()=>download(`article_${slug(gatherArticle().title,"share")}.md`,buildArticleMarkdown(gatherArticle())));
+
+/* ---- イベント：06 画像解析 ---- */
+document.getElementById("an-file").addEventListener("change",e=>{const f=e.target.files[0]; if(f) analyzeImage(f);});
+document.getElementById("an-name").addEventListener("input",()=>{if(window.__lastAnalysis)renderAnalyze();});
+document.getElementById("an-copy").addEventListener("click",()=>copyText(analyzeMarkdown()));
+document.getElementById("an-dl").addEventListener("click",()=>download(`analysis_${slug(document.getElementById("an-name").value,"image")}.md`,analyzeMarkdown()));
+document.getElementById("an-toprompt").addEventListener("click",analyzeToVideoPrompt);
+
+/* ---- イベント：07 AI壁打ち ---- */
+document.getElementById("ai-send").addEventListener("click",sendChat);
+document.getElementById("ai-input").addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="Enter")sendChat();});
+document.getElementById("ai-clear").addEventListener("click",()=>{aiHistory=[];renderChat();});
+document.getElementById("ai-export").addEventListener("click",()=>download("usausa_chat.md",aiHistory.map(m=>`**${m.role==="user"?"私":"うさうさ"}**：${m.content}`).join("\n\n")));
+
+/* ---- イベント：08 設計書 ---- */
+["d_project","d_client","d_director","d_due","d_goal","d_target","d_count","d_features","d_constraint"]
+  .forEach(idv=>document.getElementById(idv).addEventListener("input",renderDoc));
+document.getElementById("doc-copy").addEventListener("click",()=>copyText(STATE.doc.view==="wbs"?docWbsMd(gatherDoc()):currentDoc(gatherDoc())));
+document.getElementById("doc-md").addEventListener("click",()=>download(`docs_${slug(gatherDoc().project,"project")}.md`,docAllMarkdown(gatherDoc())));
+document.getElementById("doc-csv").addEventListener("click",()=>download(`wbs_${slug(gatherDoc().project,"project")}.csv`,docWbsCsv()));
+document.getElementById("doc-print").addEventListener("click",()=>{
+  const d=gatherDoc(); const out=document.getElementById("doc-output");
+  const saved=out.innerHTML;
+  out.innerHTML=`<pre class="prompt-pre" style="background:transparent">${esc(docAllMarkdown(d))}</pre>`;
+  showTab("doc"); window.print();
+  setTimeout(()=>{renderDoc();},500);
+});
+
+/* ---- イベント：保存・復元 ---- */
+document.getElementById("proj-save").addEventListener("click",()=>{
+  download(`usausa_project_${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(collectProject(),null,2));
+});
+document.getElementById("proj-load").addEventListener("click",()=>document.getElementById("proj-file").click());
+document.getElementById("proj-file").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{try{applyProject(JSON.parse(r.result));}catch(err){toast("読み込みに失敗しました");}};
+  r.readAsText(f); e.target.value="";
+});
+
+/* ---- イベント：🐞 テントウムシ ---- */
+document.getElementById("ladybug").addEventListener("click",()=>document.getElementById("bugpanel").classList.toggle("open"));
+document.getElementById("bug-add").addEventListener("click",()=>{
+  const t=document.getElementById("bug-text").value.trim(); if(!t){toast("内容を入力してください");return;}
+  bugs.push({t:Date.now(),sev:STATE.bug.sev,text:t}); document.getElementById("bug-text").value=""; renderBugs(); toast("記録しました 🐞");
+});
+document.getElementById("bug-csv").addEventListener("click",()=>{ if(!bugs.length){toast("記録がありません");return;} download("usausa_bugs.csv",bugCsv()); });
+
+/* ---- イベント：09 キャラ登録 ---- */
+["ps-name","ps-role","ps-style","ps-voice","ps-closing","ps-ng"].forEach(idv=>document.getElementById(idv).addEventListener("input",renderPresetOut));
+document.getElementById("pal-add").addEventListener("click",()=>{curPreset().palette.push({role:"",hex:"#CCCCCC"});renderPalette();renderPresetOut();renderPresetChips();});
+document.getElementById("preset-new").addEventListener("click",()=>{saveEditingToPreset();presets.push(defPreset("新しいキャラ","","フラット2Dアニメ","","","3D・写実",[{role:"メイン",hex:"#8B2D4F"}]));activeP=presets.length-1;loadPresetToEditor();});
+document.getElementById("preset-dup").addEventListener("click",()=>{saveEditingToPreset();const s=curPreset();presets.push(defPreset(s.name+"のコピー",s.role,s.style,s.voice,s.closing,s.ng,s.palette.map(c=>({...c}))));activeP=presets.length-1;loadPresetToEditor();});
+document.getElementById("preset-del").addEventListener("click",()=>{if(presets.length<=1){toast("最後の1件は削除できません");return;}presets.splice(activeP,1);activeP=Math.max(0,activeP-1);loadPresetToEditor();});
+document.getElementById("ps-copy").addEventListener("click",()=>{saveEditingToPreset();copyText(presetBibleText(curPreset()));});
+document.getElementById("ps-dl").addEventListener("click",()=>{saveEditingToPreset();download(`character_${slug(curPreset().name,"preset")}.md`,presetBibleText(curPreset()));});
+document.getElementById("ps-tovideo").addEventListener("click",presetToVideo);
+
+/* ---- イベント：鈴（クリック音）---- */
+document.addEventListener("click",e=>{ if(e.target.closest("button")) playClick(); });
+(function(){
+  const bell=document.getElementById("bell");
+  bell.addEventListener("click",()=>{
+    soundOn=!soundOn; bell.textContent=soundOn?"🔔":"🔕"; bell.classList.toggle("on",soundOn);
+    if(soundOn){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+    toast(soundOn?"クリック音：ON 🔔":"クリック音：OFF 🔕");
+  });
+})();
+
+/* ---- イベント：使い方 ---- */
+document.getElementById("help-btn").addEventListener("click",()=>document.getElementById("help-overlay").classList.add("open"));
+document.getElementById("help-close").addEventListener("click",()=>document.getElementById("help-overlay").classList.remove("open"));
+document.getElementById("help-overlay").addEventListener("click",e=>{if(e.target.id==="help-overlay")e.target.classList.remove("open");});
+
+/* ===========================================================
+   TAB 10 — 制作依頼口上（発注ひな形）
+   =========================================================== */
+function gatherReq(){
+  const v=id=>(document.getElementById(id).value||"").trim();
+  const g=gather();
+  return {title:v("r_title"),audience:v("r_audience"),pip:v("r_pip"),
+    core1:v("r_core1"),core2:v("r_core2"),core3:v("r_core3"),signoff:v("r_signoff"),
+    anchor:g.anchor,voice:g.voice,pron:g.pron,closing:g.closing};
+}
+function buildRequest(r){
+  return [
+`${r.anchor||"しろうさぎアナウンサー"}がナビゲートする、${r.audience||"（対象）"}向け解説動画`,
+`**「${r.title||"（タイトル）"}」**の作成を開始いたしました。`,
+`これまでの対話で確立した「絶対遵守ルール」を反映し、以下の仕様で構成しています。`,
+``,
+`▼ 動画の構成と演出仕様`,
+``,
+`■ ビジュアル（小窓固定演出）`,
+`・ソース画像「${r.pip||"（PiP画像）"}」を、00:00からエンディングまで画面右下に大きめの小窓（PiP）で常時固定します。`,
+`・メイン画面では、青（安心・通常）と赤（重要・核心）の背景色を使い分け、視覚的に重要度を伝えます。`,
+``,
+`■ ナレーションと音声`,
+`・${r.voice||"落ち着いた女性の声"}による誠実なナレーションです。`,
+`・専門用語の発音は指定どおり（${r.pron||"—"}）に統一します。`,
+``,
+`■ 解説内容の核心`,
+`・原理原則：${r.core1||"（原理原則）"}`,
+`・モデル／フレーム：${r.core2||"（モデル）"}`,
+`・実践ガイド：${r.core3||"（実践ガイド）"}`,
+``,
+`■ エンディング`,
+`・決めゼリフ「${r.closing||"（決めゼリフ）"}」で番組を締めくくります。`,
+``,
+`動画の生成には最大で10分ほどかかります。完了しましたら、スタジオタブにて最新版をご確認いただけます。`,
+``,
+`「${r.signoff||""} 完成まで、少々お待ちくださいね」——${r.anchor||"しろうさぎアナウンサー"}より。`
+  ].join("\n");
+}
+function renderRequest(){
+  const r=gatherReq();
+  document.getElementById("request-output").innerHTML=
+    `<div class="title-card"><div class="kicker">制作開始アナウンス</div><h3>${esc(r.title||"（タイトル）")}</h3>
+     <div class="meta">対象：${esc(r.audience||"—")}　／　PiP：${esc(r.pip||"—")}</div></div>
+     <pre class="prompt-pre" style="background:transparent">${esc(buildRequest(r))}</pre>`;
+}
+
+
+const SAMPLE={
+  fields:{
+    e_skill:"プロンプトエンジニアリング",
+    e_sub:"商用品質を叩き出す3つの鉄則",
+    e_problem:"AIに頼んだのに、出力が毎回ブレてしまう",
+    e_conclusion:"品質は才能ではなく『仕組み』で上げられます",
+    e_action:"明日の業務で、まず1つだけ『証拠（テスト）』を添えてみてください。",
+    a_title:"🐰 AIの出力が毎回ブレる…を仕組みで解決する3本",
+    a_reader:"社内サブ講師", a_narrow:"経験が浅い方", a_scene:"勉強会・研修の準備中に",
+    a_author:"石黒友季子", a_date:"2026年",
+    a_back:"自分の勉強会で「なんとなく動く」プロンプトを共有して、盛大にスベった経験があります。",
+    a_ref:"教育工学の論文・現場経験", a_tool:"うさうさ プロンプトスタジオ",
+    a_pain1:"AIに頼んでも品質が安定しない…", a_pain2:"レビューで毎回同じ指摘をされてしまう…", a_pain3:"自己流から抜け出せない…",
+    a_toolnote:"ふわふわの白兎アナウンサーが、やさしく解説してくれます",
+    a_quote:"面白きこともなき世を面白く。", a_joke:"にんじん片手に、真顔で品質の話をします",
+    a_access:"社内共有のGoogle Driveリンクです", a_contact:"石黒"
+  },
+  metaphors:[
+    {term:"敵対的テスト",figure:"自分の城を自分で攻める",body:"完璧に見えるプロンプトも、攻撃者の視点で壊しにいくと弱点が見えます。",kind:"why"},
+    {term:"外の事実",figure:"味見せずに料理を出さない",body:"AIの「直しました」を鵜呑みにせず、テスト結果という外の事実で裏取りします。",kind:"how"}
+  ],
+  videos:[
+    {title:"プロンプトエンジニアリング入門",url:"https://example.com/video1",copy:'やり方より"証拠"で語ろう',desc:"敵対的テストと外の事実で、AIの出力を商用品質に引き上げる方法を解説します。"}
+  ]
+};
+function loadSample(){
+  Object.entries(SAMPLE.fields).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
+  metaphors=SAMPLE.metaphors.map(m=>({...m,id:++mid}));
+  videos=SAMPLE.videos.map(v=>({...v,id:++vid2}));
+  renderMetaphors();render();renderVideoRows();renderArticle();
+}
+function clearAll(){
+  Object.keys(SAMPLE.fields).forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  metaphors=[defaultRow("why"),defaultRow("how")];
+  videos=[defaultVideo()];
+  renderMetaphors();render();renderVideoRows();renderArticle();
+  toast("入力をクリアしました");
+}
+
+/* ---- イベント：サンプル／クリア ---- */
+document.getElementById("sample-btn").addEventListener("click",()=>{loadSample();toast("白兎アナのサンプルを読み込みました 🐰");});
+document.getElementById("clear-btn").addEventListener("click",clearAll);
+
+/* ---- イベント：10 制作依頼 ---- */
+["r_title","r_audience","r_pip","r_core1","r_core2","r_core3","r_signoff","g_voice","g_pron","g_closing","g_anchor"]
+  .forEach(idv=>{const el=document.getElementById(idv);if(el)el.addEventListener("input",renderRequest);});
+document.getElementById("r-copy").addEventListener("click",()=>copyText(buildRequest(gatherReq())));
+document.getElementById("r-dl").addEventListener("click",()=>download(`brief_${slug(gatherReq().title,"request")}.md`,buildRequest(gatherReq())));
+
+/* ---- 初期化 ---- */
+applyVisibility();
+seedPresets(); loadPresetToEditor();
+renderImage(); renderVideo(); renderBoard();
+renderDoc(); renderChat(); renderBugs(); renderRequest();
+loadSample();   // デフォルトで白兎アナのニュース番組サンプルを投入
+</script>
+</body>
+</html>
