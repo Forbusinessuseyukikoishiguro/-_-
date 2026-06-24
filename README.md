@@ -1,4 +1,6 @@
 うさうさ プロンプトスタジオ
-U S A U S A  研修工房
+台本・動画・アニメ用プロンプトを組むツール
+2026/06/24
 
-![Uploading image.png…]()
+▼アーティファクト版
+https://claude.ai/public/artifacts/4bde1bdb-edb5-42f2-b4e2-6a9ee1082c49
